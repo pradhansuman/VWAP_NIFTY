@@ -1,0 +1,57 @@
+//@version=5
+indicator("Nifty VWAP-RSI Confluence", overlay=true, max_labels_count=50)
+
+rsiLen = input.int(14, "RSI length")
+rsiOb = input.int(70, "RSI overbought")
+rsiOs = input.int(30, "RSI oversold")
+showBands = input.bool(true, "Show VWAP bands")
+
+vwapV = ta.vwap(hlc3)
+dev = ta.stdev(hlc3, 1440)
+band1U = vwapV + dev
+band1L = vwapV - dev
+band2U = vwapV + 2 * dev
+band2L = vwapV - 2 * dev
+band3U = vwapV + 3 * dev
+band3L = vwapV - 3 * dev
+
+plot(vwapV, "VWAP", color=color.new(color.teal, 0), linewidth=2)
+plot(showBands ? band1U : na, "1σ upper", color=color.new(color.teal, 50))
+plot(showBands ? band1L : na, "1σ lower", color=color.new(color.teal, 50))
+plot(showBands ? band2U : na, "2σ upper", color=color.new(color.orange, 40))
+plot(showBands ? band2L : na, "2σ lower", color=color.new(color.orange, 40))
+plot(showBands ? band3U : na, "3σ upper", color=color.new(color.red, 50))
+plot(showBands ? band3L : na, "3σ lower", color=color.new(color.red, 50))
+
+rsi = ta.rsi(close, rsiLen)
+pivLo = ta.pivotlow(low, 3, 3)
+pivHi = ta.pivothigh(high, 3, 3)
+rsiLo = ta.pivotlow(rsi, 3, 3)
+rsiHi = ta.pivothigh(rsi, 3, 3)
+
+var float lastPriceLo = na
+var float lastRsiLo = na
+var float lastPriceHi = na
+var float lastRsiHi = na
+
+bullDiv = false
+bearDiv = false
+if not na(pivLo) and not na(rsiLo)
+    bullDiv := not na(lastPriceLo) and pivLo < lastPriceLo and rsiLo > lastRsiLo
+    lastPriceLo := pivLo
+    lastRsiLo := rsiLo
+if not na(pivHi) and not na(rsiHi)
+    bearDiv := not na(lastPriceHi) and pivHi > lastPriceHi and rsiHi < lastRsiHi
+    lastPriceHi := pivHi
+    lastRsiHi := rsiHi
+
+reclaimLong = close[1] < vwapV[1] and close >= vwapV
+rejectShort = close[1] > vwapV[1] and close <= vwapV
+longSignal = reclaimLong and (bullDiv or rsi <= rsiOs or rsi > rsi[1])
+shortSignal = rejectShort and (bearDiv or rsi >= rsiOb or rsi < rsi[1])
+
+plotshape(longSignal, title="Long confluence", style=shape.labelup, location=location.belowbar, color=color.new(color.teal, 0), text="VWAP+RSI", textcolor=color.white, size=size.tiny)
+plotshape(shortSignal, title="Short confluence", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 0), text="VWAP+RSI", textcolor=color.white, size=size.tiny)
+
+alertcondition(longSignal, "VWAP-RSI long", "Price reclaimed VWAP with bullish RSI context")
+alertcondition(shortSignal, "VWAP-RSI short", "Price lost VWAP with bearish RSI context")
