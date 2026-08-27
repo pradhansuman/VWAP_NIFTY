@@ -250,7 +250,11 @@ export function PlaybookView({
             <Stat label="Bias" value={snap.priceSide === "above" ? "Above VWAP" : snap.priceSide === "below" ? "Below VWAP" : "At VWAP"} />
             <Stat
               label="Setup"
-              value={snap.setup ? `${snap.setup.option} ${snap.setup.status === "entry" ? "ENTRY" : "wait"}` : "None"}
+              value={
+                snap.setup
+                  ? `${venue === "spot" ? (snap.setup.side === "long" ? "Long" : "Short") : snap.setup.option} ${snap.setup.status === "entry" ? "ENTRY" : "wait"}`
+                  : "None"
+              }
             />
           </div>
           {snap.avoid && (
