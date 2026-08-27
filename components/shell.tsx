@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Activity,
   BookOpen,
+  BarChart3,
   Building2,
   Coins,
   Crosshair,
@@ -22,6 +23,7 @@ import { cn } from "@/lib/utils";
 const LINKS = [
   { href: "/nifty", label: "Nifty", icon: Landmark },
   { href: "/banknifty", label: "Bank Nifty", icon: Building2 },
+  { href: "/sensex", label: "Sensex", icon: BarChart3 },
   { href: "/bitcoin", label: "Bitcoin", icon: Coins },
   { href: "/", label: "Stocks desk", icon: Gauge },
   { href: "/scanner", label: "Mean reversion", icon: Radar },
@@ -38,27 +40,34 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const bitcoin = pathname.startsWith("/bitcoin");
   const niftyWin = pathname === "/nifty" || pathname.startsWith("/window/nifty");
   const bankWin = pathname === "/banknifty" || pathname.startsWith("/window/banknifty");
+  const sensexWin = pathname === "/sensex" || pathname.startsWith("/window/sensex");
   const deskLabel = niftyWin
     ? "Nifty 50 window"
     : bankWin
       ? "Bank Nifty window"
-      : bitcoin
-        ? "Bitcoin desk"
-        : "Nifty options desk";
+      : sensexWin
+        ? "Sensex window"
+        : bitcoin
+          ? "Bitcoin desk"
+          : "Nifty options desk";
   const deskTitle = niftyWin
     ? "Nifty 50 VWAP + RSI"
     : bankWin
       ? "Bank Nifty VWAP + RSI"
-      : bitcoin
-        ? "BTCUSDT VWAP + RSI"
-        : "VWAP + RSI applications";
+      : sensexWin
+        ? "Sensex VWAP + RSI"
+        : bitcoin
+          ? "BTCUSDT VWAP + RSI"
+          : "VWAP + RSI applications";
   const deskHint = niftyWin
     ? "Standalone Nifty 50 tape, PCR, ATM options, and 15m CE/PE playbook."
     : bankWin
       ? "Standalone Bank Nifty tape, PCR, ATM options, and 15m CE/PE playbook."
-      : bitcoin
-        ? "UTC-day VWAP and RSI on live BTCUSDT. Isolated from the Nifty tape."
-        : "Session VWAP bands, RSI slope, and PCR bias on a Nifty 50 / options watchlist.";
+      : sensexWin
+        ? "Standalone Sensex tape, PCR, ATM options, and 15m CE/PE playbook."
+        : bitcoin
+          ? "UTC-day VWAP and RSI on live BTCUSDT. Isolated from the Nifty tape."
+          : "Session VWAP bands, RSI slope, and PCR bias on a Nifty 50 / options watchlist.";
 
   if (popout) {
     return (
@@ -109,7 +118,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
                     active ||
                       (link.href === "/bitcoin" && bitcoin) ||
                       (link.href === "/nifty" && niftyWin) ||
-                      (link.href === "/banknifty" && bankWin)
+                      (link.href === "/banknifty" && bankWin) ||
+                      (link.href === "/sensex" && sensexWin)
                       ? "bg-teal-400/15 text-teal-200"
                       : "text-zinc-400 hover:bg-white/5 hover:text-zinc-100",
                   )}
@@ -117,11 +127,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   <Icon className="size-3.5" />
                   {link.label}
                 </Link>
-                {(link.href === "/nifty" || link.href === "/banknifty") && (
+                {(link.href === "/nifty" || link.href === "/banknifty" || link.href === "/sensex") && (
                   <button
                     type="button"
                     title={`Open ${link.label} in a separate window`}
-                    onClick={() => openIndexWindow(link.href === "/nifty" ? "NIFTY" : "BANKNIFTY")}
+                    onClick={() =>
+                      openIndexWindow(
+                        link.href === "/nifty" ? "NIFTY" : link.href === "/banknifty" ? "BANKNIFTY" : "SENSEX",
+                      )
+                    }
                     className="rounded-md p-1 text-zinc-500 hover:bg-white/5 hover:text-teal-200"
                   >
                     <ExternalLink className="size-3" />

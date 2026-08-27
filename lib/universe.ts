@@ -3,6 +3,7 @@ import type { Instrument } from "@/lib/types";
 export const UNIVERSE: Instrument[] = [
   { symbol: "NIFTY", name: "Nifty 50", kind: "index", lotSize: 75, basePrice: 24820, instrumentKey: "NSE_INDEX|Nifty 50" },
   { symbol: "BANKNIFTY", name: "Bank Nifty", kind: "index", lotSize: 30, basePrice: 55240, instrumentKey: "NSE_INDEX|Nifty Bank" },
+  { symbol: "SENSEX", name: "BSE Sensex", kind: "index", lotSize: 20, basePrice: 81240, instrumentKey: "BSE_INDEX|SENSEX" },
   { symbol: "NIFTY24800CE", name: "Nifty 24800 CE", kind: "option", lotSize: 75, basePrice: 142 },
   { symbol: "NIFTY24800PE", name: "Nifty 24800 PE", kind: "option", lotSize: 75, basePrice: 118 },
   { symbol: "RELIANCE", name: "Reliance Industries", kind: "stock", lotSize: 250, basePrice: 2924, instrumentKey: "NSE_EQ|INE002A01018" },
@@ -23,7 +24,7 @@ export const UNIVERSE: Instrument[] = [
   { symbol: "SUNPHARMA", name: "Sun Pharma", kind: "stock", lotSize: 350, basePrice: 1742, instrumentKey: "NSE_EQ|INE044A01036" },
 ];
 
-export const LIVE_UNIVERSE = UNIVERSE.filter((s) => Boolean(s.instrumentKey));
+export const LIVE_UNIVERSE = UNIVERSE.filter((s) => Boolean(s.instrumentKey) && s.symbol !== "SENSEX");
 
 export function getInstrument(symbol: string): Instrument | undefined {
   return UNIVERSE.find((s) => s.symbol.toUpperCase() === symbol.toUpperCase());

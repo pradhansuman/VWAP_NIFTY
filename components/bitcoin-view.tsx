@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import { useLiveJson } from "@/lib/use-live-json";
-import type { Timeframe, WatchlistRow } from "@/lib/types";
+import type { Bar, Timeframe, WatchlistRow } from "@/lib/types";
+import type { PlaybookSnapshot } from "@/lib/playbook";
 import { TIMEFRAMES } from "@/lib/universe";
 import { pct, rsiLabel, usd } from "@/lib/format";
 import { Pill, Tone } from "@/components/pills";
-import { PlaybookView } from "@/components/playbook-view";
+import { PlayChart } from "@/components/play-chart";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { Check, X } from "lucide-react";
 
 type Payload = {
   clock: string;
@@ -21,6 +21,12 @@ type Payload = {
     vwap: { vwap: number; deviationPct: number; position: string };
     rsi: { value: number; trend: string };
     confluence: { side: string; label: string; reason: string };
+  };
+  playbook: {
+    snapshot: PlaybookSnapshot;
+    bars: Bar[];
+    vwapSeries: number[];
+    rsiSeries: number[];
   };
 };
 
@@ -47,34 +53,52 @@ function TfCell({ row, tf }: { row: WatchlistRow; tf: Timeframe }) {
   );
 }
 
+function Steps({ steps, tone }: { steps: PlaybookSnapshot["long"]["steps"]; tone: "long" | "short" }) {
+  return (
+    <ol className="space-y-1.5">
+      {steps.map((step, idx) => (
+        <li key={step.id} className="flex items-start gap-2 text-sm">
+          <span
+            className={cn(
+              "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-[10px]",
+              step.ok
+                ? tone === "long"
+                  ? "bg-emerald-400/20 text-emerald-300"
+                  : "bg-rose-400/20 text-rose-300"
+                : "bg-white/8 text-zinc-500",
+            )}
+          >
+            {step.ok ? <Check className="size-3" /> : <X className="size-3" />}
+          </span>
+          <span className={step.ok ? "text-zinc-200" : "text-zinc-500"}>
+            <span className="mr-1 font-mono text-[11px] text-zinc-500">{idx + 1}.</span>
+            {step.label}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export function BitcoinView({ initial = null }: { initial?: Payload | null }) {
-  const [tab, setTab] = useState<"tape" | "playbook">("tape");
-  const { data, error } = useLiveJson<Payload>("/api/bitcoin", initial, 20_000);
+  const { data, error } = useLiveJson<Payload>("/api/bitcoin", initial, 15_000);
+  const snap = data?.playbook.snapshot;
+  const setup = snap?.setup;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="font-mono text-[11px] tracking-[0.16em] text-amber-300/90 uppercase">Separate section</p>
-          <h2 className="text-lg font-semibold">Bitcoin desk</h2>
-          <p className="text-sm text-zinc-400">
-            BTCUSDT with UTC-day VWAP and RSI — same 15m rejection-breakout playbook, isolated from the Nifty/Upstox tape.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant={tab === "tape" ? "default" : "outline"} onClick={() => setTab("tape")}>
-            MTF tape
-          </Button>
-          <Button size="sm" variant={tab === "playbook" ? "default" : "outline"} onClick={() => setTab("playbook")}>
-            15m playbook
-          </Button>
-        </div>
+    <div className="space-y-3">
+      <div>
+        <p className="font-mono text-[11px] tracking-[0.16em] text-amber-300/90 uppercase">Bitcoin window</p>
+        <h2 className="text-lg font-semibold">BTCUSDT · UTC VWAP playbook</h2>
+        <p className="text-sm text-zinc-400">
+          Same 15m rejection-breakout as the indexes: Long / Short in dollars, stop at the rejection extreme, target 1:2.
+        </p>
       </div>
 
       {error && <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</p>}
       {!data && !error && <p className="text-sm text-zinc-400">Fetching BTCUSDT candles…</p>}
 
-      {data && tab === "tape" && (
+      {data && snap && (
         <>
           <p className="text-xs text-zinc-500">{data.sourceNote} · {data.clock}</p>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -99,11 +123,74 @@ export function BitcoinView({ initial = null }: { initial?: Payload | null }) {
               <p className="text-xs capitalize text-zinc-500">{data.tape.rsi.trend}</p>
             </div>
             <div className="rounded-xl border border-white/10 bg-white/4 px-3 py-2">
-              <p className="text-[11px] text-zinc-400">Confluence</p>
-              <p className="text-sm text-zinc-200">{data.tape.confluence.label}</p>
-              <p className="mt-1 text-xs text-zinc-500">{data.tape.confluence.reason}</p>
+              <p className="text-[11px] text-zinc-400">Setup</p>
+              <p className="text-sm text-zinc-200">
+                {setup
+                  ? `${setup.side === "long" ? "Long" : "Short"} ${snap.actionable ? setup.status : "vetoed"}`
+                  : "No entry"}
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">{data.tape.confluence.label}</p>
             </div>
           </div>
+
+          {snap.avoid && (
+            <p className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-sm text-amber-100">{snap.avoid}</p>
+          )}
+
+          <div className="grid gap-3 xl:grid-cols-[1.2fr_1fr]">
+            <div className="rounded-xl border border-white/10 bg-white/4 p-3">
+              <p className="mb-2 text-sm font-medium">15m UTC VWAP + RSI</p>
+              <PlayChart
+                bars={data.playbook.bars}
+                vwapSeries={data.playbook.vwapSeries}
+                rsiSeries={data.playbook.rsiSeries}
+                snapshot={snap}
+              />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+              <div className={cn("rounded-xl border p-3", snap.long.ready ? "border-emerald-400/40 bg-emerald-400/8" : "border-emerald-400/20 bg-emerald-400/5")}>
+                <p className="mb-1 text-sm font-medium text-emerald-200">Long BTC</p>
+                <Steps steps={snap.long.steps} tone="long" />
+              </div>
+              <div className={cn("rounded-xl border p-3", snap.short.ready ? "border-rose-400/40 bg-rose-400/8" : "border-rose-400/20 bg-rose-400/5")}>
+                <p className="mb-1 text-sm font-medium text-rose-200">Short BTC</p>
+                <Steps steps={snap.short.steps} tone="short" />
+              </div>
+            </div>
+          </div>
+
+          {setup ? (
+            <div className="rounded-xl border border-white/10 bg-white/4 p-3">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <Pill tone={setup.side === "long" ? "long" : "short"}>
+                  {setup.side === "long" ? "Long" : "Short"} {snap.actionable ? setup.status : "wait"}
+                </Pill>
+                <span className="text-xs text-zinc-400">BTCUSDT · 1:2 from the rejection extreme</span>
+              </div>
+              <div className="grid gap-2 text-sm sm:grid-cols-3">
+                <div className="rounded-lg bg-black/25 p-3">
+                  <p className="text-[11px] text-zinc-500">Enter</p>
+                  <p className="font-mono text-lg">{usd(setup.entry)}</p>
+                </div>
+                <div className="rounded-lg bg-black/25 p-3">
+                  <p className="text-[11px] text-zinc-500">Stop loss</p>
+                  <p className="font-mono text-lg text-rose-300">{usd(setup.stop)}</p>
+                </div>
+                <div className="rounded-lg bg-black/25 p-3">
+                  <p className="text-[11px] text-zinc-500">Target 1:2</p>
+                  <p className="font-mono text-lg text-emerald-300">{usd(setup.target)}</p>
+                </div>
+              </div>
+              <p className="mt-2 text-[11px] text-zinc-500">
+                Risk {usd(setup.risk)} per coin. Dashed lines on the chart are the same three levels.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-white/15 px-4 py-3 text-sm text-zinc-400">
+              No Bitcoin entry yet. Wait for UTC VWAP rejection, RSI confirm, then the 15m breakout. Enter / stop / target print here in USD when that fires.
+            </div>
+          )}
+
           <div className="overflow-x-auto rounded-xl border border-white/10">
             <table className="w-full text-sm">
               <thead>
@@ -148,15 +235,6 @@ export function BitcoinView({ initial = null }: { initial?: Payload | null }) {
             </table>
           </div>
         </>
-      )}
-
-      {tab === "playbook" && (
-        <PlaybookView
-          endpoint="/api/bitcoin/playbook"
-          defaultSymbol="BTCUSDT"
-          venue="spot"
-          showScan={false}
-        />
       )}
     </div>
   );

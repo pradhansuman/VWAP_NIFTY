@@ -26,12 +26,12 @@ Register that redirect URI on the Upstox developer app. Access tokens from the s
 
 | Surface | What it does |
 | --- | --- |
-| **Nifty / Bank Nifty windows** | Pop-out: live LTP, 15m chart, CE/PE checklist, ATM rupee risk, India VIX, session veto. PCR stays on the index, not stocks. |
+| **Nifty / Bank Nifty / Sensex windows** | Pop-outs: live LTP, 15m chart, CE/PE checklist, ATM rupee risk, India VIX, session veto. Entry / SL / target on the same screen. |
+| **Bitcoin** | Isolated BTCUSDT desk: UTC-day VWAP, MTF RSI, and Long/Short entry · stop · 1:2 target on the same screen |
 | **Stocks desk** | Combined Nifty 50 stocks MTF watchlist |
 | **Mean reversion** | Names >2% from VWAP with RSI &lt;30 or &gt;70 |
 | **Anchored VWAP** | Session open, weekly open, or largest gap, with RSI slope |
 | **Confluence** | VWAP reclaim/reject aligned with RSI divergence or slope |
-| **Bitcoin** | Isolated BTCUSDT desk: UTC VWAP, MTF RSI, 15m long/short playbook |
 | **Backtest** | VWAP-reclaim entries, RSI gates, ATR stop, R-multiple target |
 | **Upstox** | Token / OAuth connect |
 | **Pine** | `pine/vwap-rsi-confluence.pine` and `pine/vwap-rsi-15m-rejection.pine` |

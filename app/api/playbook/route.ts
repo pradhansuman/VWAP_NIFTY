@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   const mode = searchParams.get("mode") ?? "live";
   const now = Date.now();
 
-  if ((symbol === "NIFTY" || symbol === "BANKNIFTY") && mode !== "backtest") {
+  if ((symbol === "NIFTY" || symbol === "BANKNIFTY" || symbol === "SENSEX") && mode !== "backtest") {
     const pack = await loadIndexWindow(symbol as IndexWindowId, request, now);
     const payload = indexPayload(pack, now);
     return NextResponse.json({

@@ -1,19 +1,19 @@
-export type IndexWindowId = "NIFTY" | "BANKNIFTY";
+export type IndexWindowId = "NIFTY" | "BANKNIFTY" | "SENSEX";
 
 const SPECS: Record<
   IndexWindowId,
-  { path: string; name: string; width: number; height: number }
+  { path: string; name: string; width: number; height: number; slot: number }
 > = {
-  NIFTY: { path: "/window/nifty", name: "nifty-vwap-window", width: 1280, height: 860 },
-  BANKNIFTY: { path: "/window/banknifty", name: "banknifty-vwap-window", width: 1280, height: 860 },
+  NIFTY: { path: "/window/nifty", name: "nifty-vwap-window", width: 1280, height: 860, slot: 0 },
+  BANKNIFTY: { path: "/window/banknifty", name: "banknifty-vwap-window", width: 1280, height: 860, slot: 1 },
+  SENSEX: { path: "/window/sensex", name: "sensex-vwap-window", width: 1280, height: 860, slot: 2 },
 };
 
 export function openIndexWindow(symbol: IndexWindowId) {
   if (typeof window === "undefined") return;
   const spec = SPECS[symbol];
-  const screenLeft = window.screenX ?? window.screenLeft ?? 0;
   const avail = window.screen.availWidth || 1600;
-  const left = symbol === "NIFTY" ? Math.max(16, screenLeft + 16) : Math.max(16, Math.floor(avail / 2) - 40);
+  const left = Math.max(16, 24 + spec.slot * Math.min(420, Math.floor(avail / 3)));
   const top = 48;
   const features = [
     "popup=yes",

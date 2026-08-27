@@ -5,6 +5,7 @@ import { getScanner, niftyTape } from "@/lib/market";
 import { formatIstClock, sessionStatus } from "@/lib/session";
 import { evaluatePlaybook } from "@/lib/playbook";
 import { pickAtmLeg } from "@/lib/sizing";
+import { btcPlaybook } from "@/lib/bitcoin/desk";
 
 export function dashboardPayload(pack: DeskPack, now: number) {
   return {
@@ -107,6 +108,7 @@ export function bitcoinPayload(pack: BtcDesk, now: number) {
       day: "2-digit",
       month: "short",
     }).format(now) + " UTC";
+  const evaluated = btcPlaybook(pack.bars);
   return {
     generatedAt: now,
     clock,
@@ -120,6 +122,12 @@ export function bitcoinPayload(pack: BtcDesk, now: number) {
       vwap: tf.vwap,
       rsi: tf.rsi,
       confluence: tf.confluence,
+    },
+    playbook: {
+      snapshot: evaluated.snapshot,
+      bars: evaluated.bars.slice(-80),
+      vwapSeries: evaluated.vwap.slice(-80),
+      rsiSeries: evaluated.rsi.slice(-80),
     },
   };
 }

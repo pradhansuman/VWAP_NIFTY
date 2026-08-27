@@ -102,13 +102,18 @@ export function IndexWindowView({
   compact = false,
   initial = null,
 }: {
-  symbol: "NIFTY" | "BANKNIFTY";
+  symbol: "NIFTY" | "BANKNIFTY" | "SENSEX";
   compact?: boolean;
   initial?: Payload | null;
 }) {
   const { data, error } = useLiveJson<Payload>(`/api/index/${symbol}`, initial, 30_000);
   const quotes = useQuotes(data?.quoteKeys ?? [], 3000);
-  const accent = symbol === "BANKNIFTY" ? "border-sky-400/25 bg-sky-400/8" : "border-teal-400/25 bg-teal-400/8";
+  const accent =
+    symbol === "BANKNIFTY"
+      ? "border-sky-400/25 bg-sky-400/8"
+      : symbol === "SENSEX"
+        ? "border-violet-400/25 bg-violet-400/8"
+        : "border-teal-400/25 bg-teal-400/8";
 
   const liveLast = (data?.instrument.instrumentKey && quotes[data.instrument.instrumentKey]?.last) || data?.tape.last;
   const vixLast = quotes["NSE_INDEX|India VIX"]?.last ?? data?.vix.last;
@@ -212,7 +217,7 @@ export function IndexWindowView({
             </div>
           </div>
 
-          {snap.setup && (
+          {snap.setup ? (
             <div className="rounded-xl border border-white/10 bg-white/4 p-3">
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <Pill tone={snap.setup.side === "long" ? "long" : "short"}>
@@ -251,6 +256,10 @@ export function IndexWindowView({
                 </div>
               )}
               <p className="mt-2 text-[11px] text-zinc-500">ATM sized at 0.5 delta. Premium risk ≈ index points × 0.5; rupees = that × lot. Not a fill.</p>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-white/15 px-4 py-3 text-sm text-zinc-400">
+              No entry yet. Wait for a 15m VWAP rejection, RSI confirm, then the breakout. Entry / SL / 1:2 target print here when that fires.
             </div>
           )}
 

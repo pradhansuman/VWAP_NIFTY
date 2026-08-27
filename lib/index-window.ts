@@ -24,10 +24,19 @@ export const INDEX_WINDOWS = {
     symbol: "BANKNIFTY" as const,
     title: "Bank Nifty",
     eyebrow: "Bank Nifty window",
-    blurb: "Standalone Bank Nifty desk — session VWAP, RSI, PCR, and ATM CE/PE. Isolated from Nifty 50 and stocks.",
+    blurb: "Standalone Bank Nifty desk — session VWAP, RSI, PCR, and ATM CE/PE. Isolated from Nifty 50 and Sensex.",
     underlyingKey: "NSE_INDEX|Nifty Bank",
     prefix: "BANKNIFTY",
     displayName: "Bank Nifty",
+  },
+  SENSEX: {
+    symbol: "SENSEX" as const,
+    title: "Sensex",
+    eyebrow: "Sensex window",
+    blurb: "Standalone BSE Sensex desk — session VWAP, RSI, PCR, and ATM CE/PE. Isolated from Nifty and Bank Nifty.",
+    underlyingKey: "BSE_INDEX|SENSEX",
+    prefix: "SENSEX",
+    displayName: "Sensex",
   },
 };
 

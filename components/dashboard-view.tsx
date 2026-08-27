@@ -68,19 +68,26 @@ export function DashboardView({ initial = null }: { initial?: Payload | null }) 
 
   return (
     <div>
-      <div className="mb-4 grid gap-3 sm:grid-cols-2">
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-xl border border-teal-400/25 bg-teal-400/8 px-4 py-3">
           <p className="font-mono text-[11px] tracking-[0.16em] text-teal-300/80 uppercase">Nifty 50 window</p>
-          <p className="mt-1 text-sm text-zinc-300">Spot, session VWAP, PCR, ATM CE/PE, and the 15m playbook — isolated from Bank Nifty.</p>
+          <p className="mt-1 text-sm text-zinc-300">Spot, VWAP, PCR, ATM CE/PE, entry / SL / 1:2.</p>
           <div className="mt-3">
             <PopOutButton symbol="NIFTY" label="Open Nifty window" />
           </div>
         </div>
         <div className="rounded-xl border border-sky-400/25 bg-sky-400/8 px-4 py-3">
           <p className="font-mono text-[11px] tracking-[0.16em] text-sky-300/80 uppercase">Bank Nifty window</p>
-          <p className="mt-1 text-sm text-zinc-300">Separate live window so you can park Bank Nifty on a second monitor.</p>
+          <p className="mt-1 text-sm text-zinc-300">Separate Bank Nifty tape and CE/PE playbook.</p>
           <div className="mt-3">
             <PopOutButton symbol="BANKNIFTY" label="Open Bank Nifty window" />
+          </div>
+        </div>
+        <div className="rounded-xl border border-violet-400/25 bg-violet-400/8 px-4 py-3">
+          <p className="font-mono text-[11px] tracking-[0.16em] text-violet-300/80 uppercase">Sensex window</p>
+          <p className="mt-1 text-sm text-zinc-300">BSE Sensex spot, PCR, ATM CE/PE, and 15m levels.</p>
+          <div className="mt-3">
+            <PopOutButton symbol="SENSEX" label="Open Sensex window" />
           </div>
         </div>
       </div>

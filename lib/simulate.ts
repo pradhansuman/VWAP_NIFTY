@@ -122,6 +122,7 @@ export function generateHistory(instrument: Instrument, nowMs: number, sessions 
     INFY: "reclaim_short",
     NIFTY: "trend_up",
     BANKNIFTY: "chop",
+    SENSEX: "trend_down",
   };
   for (let d = 0; d < collected.length; d++) {
     const day = collected[d];
