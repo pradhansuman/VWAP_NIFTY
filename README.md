@@ -25,8 +25,8 @@ Register that redirect URI on the Upstox developer app. Access tokens from the s
 
 | Surface | What it does |
 | --- | --- |
-| **Nifty** | Standalone Nifty 50 window: VWAP, RSI, PCR, ATM CE/PE, 15m playbook |
-| **Bank Nifty** | Standalone Bank Nifty window, isolated from Nifty 50 |
+| **Nifty** | `/nifty` tape plus **Open window** — pops a dedicated Nifty 50 browser window (`/window/nifty`) |
+| **Bank Nifty** | `/banknifty` plus a separate window (`/window/banknifty`) so the two indexes are not mixed |
 | **Stocks desk** | Combined Nifty 50 stocks MTF watchlist |
 | **Mean reversion** | Names >2% from VWAP with RSI &lt;30 or &gt;70 |
 | **Anchored VWAP** | Session open, weekly open, or largest gap, with RSI slope |

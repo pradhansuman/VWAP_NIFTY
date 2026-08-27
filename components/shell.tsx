@@ -2,8 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BookOpen, Building2, Coins, Crosshair, Gauge, Landmark, Plug, Radar, Workflow } from "lucide-react";
+import {
+  Activity,
+  BookOpen,
+  Building2,
+  Coins,
+  Crosshair,
+  ExternalLink,
+  Gauge,
+  Landmark,
+  Plug,
+  Radar,
+  Workflow,
+} from "lucide-react";
 import { SourceChip } from "@/components/source-chip";
+import { openIndexWindow } from "@/lib/popout";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
@@ -21,9 +34,10 @@ const LINKS = [
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const popout = pathname.startsWith("/window/");
   const bitcoin = pathname.startsWith("/bitcoin");
-  const niftyWin = pathname.startsWith("/nifty");
-  const bankWin = pathname.startsWith("/banknifty");
+  const niftyWin = pathname === "/nifty" || pathname.startsWith("/window/nifty");
+  const bankWin = pathname === "/banknifty" || pathname.startsWith("/window/banknifty");
   const deskLabel = niftyWin
     ? "Nifty 50 window"
     : bankWin
@@ -45,6 +59,24 @@ export function Shell({ children }: { children: React.ReactNode }) {
       : bitcoin
         ? "UTC-day VWAP and RSI on live BTCUSDT. Isolated from the Nifty tape."
         : "Session VWAP bands, RSI slope, and PCR bias on a Nifty 50 / options watchlist.";
+
+  if (popout) {
+    return (
+      <div className="flex min-h-full flex-col bg-[#071018] text-zinc-100">
+        <header className="border-b border-white/10 px-4 py-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-mono text-[11px] tracking-[0.18em] text-teal-300/80 uppercase">{deskLabel}</p>
+              <h1 className="truncate text-sm font-semibold tracking-tight">{deskTitle}</h1>
+            </div>
+            <SourceChip />
+          </div>
+        </header>
+        <main className="w-full flex-1 px-3 py-3">{children}</main>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-full flex-col bg-[#071018] text-zinc-100">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#071018]/90 backdrop-blur">
@@ -69,22 +101,33 @@ export function Shell({ children }: { children: React.ReactNode }) {
             const active = pathname === link.href;
             const Icon = link.icon;
             return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(
-                  "inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors",
-                  active ||
-                    (link.href === "/bitcoin" && bitcoin) ||
-                    (link.href === "/nifty" && niftyWin) ||
-                    (link.href === "/banknifty" && bankWin)
-                    ? "bg-teal-400/15 text-teal-200"
-                    : "text-zinc-400 hover:bg-white/5 hover:text-zinc-100",
+              <span key={link.href} className="inline-flex shrink-0 items-center">
+                <Link
+                  href={link.href}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors",
+                    active ||
+                      (link.href === "/bitcoin" && bitcoin) ||
+                      (link.href === "/nifty" && niftyWin) ||
+                      (link.href === "/banknifty" && bankWin)
+                      ? "bg-teal-400/15 text-teal-200"
+                      : "text-zinc-400 hover:bg-white/5 hover:text-zinc-100",
+                  )}
+                >
+                  <Icon className="size-3.5" />
+                  {link.label}
+                </Link>
+                {(link.href === "/nifty" || link.href === "/banknifty") && (
+                  <button
+                    type="button"
+                    title={`Open ${link.label} in a separate window`}
+                    onClick={() => openIndexWindow(link.href === "/nifty" ? "NIFTY" : "BANKNIFTY")}
+                    className="rounded-md p-1 text-zinc-500 hover:bg-white/5 hover:text-teal-200"
+                  >
+                    <ExternalLink className="size-3" />
+                  </button>
                 )}
-              >
-                <Icon className="size-3.5" />
-                {link.label}
-              </Link>
+              </span>
             );
           })}
         </nav>

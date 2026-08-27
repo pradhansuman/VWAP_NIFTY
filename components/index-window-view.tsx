@@ -6,6 +6,7 @@ import { TIMEFRAMES } from "@/lib/universe";
 import { inr, pct, rsiLabel } from "@/lib/format";
 import { Pill, Tone } from "@/components/pills";
 import { PlaybookView } from "@/components/playbook-view";
+import { PopOutButton } from "@/components/popout-button";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -54,19 +55,38 @@ function TfCell({ row, tf }: { row: WatchlistRow; tf: Timeframe }) {
   );
 }
 
-export function IndexWindowView({ symbol }: { symbol: "NIFTY" | "BANKNIFTY" }) {
+export function IndexWindowView({
+  symbol,
+  compact = false,
+}: {
+  symbol: "NIFTY" | "BANKNIFTY";
+  compact?: boolean;
+}) {
   const [tab, setTab] = useState<"tape" | "playbook">("tape");
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/index/${symbol}`)
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.error) throw new Error(json.error);
-        setData(json);
-      })
-      .catch(() => setError(`Could not load the ${symbol} window.`));
+    let cancelled = false;
+    const load = () => {
+      fetch(`/api/index/${symbol}`)
+        .then((r) => r.json())
+        .then((json) => {
+          if (cancelled) return;
+          if (json.error) throw new Error(json.error);
+          setError(null);
+          setData(json);
+        })
+        .catch(() => {
+          if (!cancelled) setError(`Could not load the ${symbol} window.`);
+        });
+    };
+    load();
+    const id = window.setInterval(load, 20_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
   }, [symbol]);
 
   const accent = symbol === "BANKNIFTY" ? "border-sky-400/25 bg-sky-400/8" : "border-teal-400/25 bg-teal-400/8";
@@ -81,7 +101,8 @@ export function IndexWindowView({ symbol }: { symbol: "NIFTY" | "BANKNIFTY" }) {
           <h2 className="text-lg font-semibold">{data?.meta.title ?? symbol}</h2>
           <p className="text-sm text-zinc-400">{data?.meta.blurb}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {!compact && <PopOutButton symbol={symbol} />}
           <Button size="sm" variant={tab === "tape" ? "default" : "outline"} onClick={() => setTab("tape")}>
             MTF tape
           </Button>

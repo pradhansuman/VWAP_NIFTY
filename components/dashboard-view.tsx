@@ -6,6 +6,7 @@ import type { Timeframe, WatchlistRow } from "@/lib/types";
 import { inr, rsiLabel } from "@/lib/format";
 import { Pill } from "@/components/pills";
 import { TapeBar } from "@/components/tape-bar";
+import { PopOutButton } from "@/components/popout-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -80,6 +81,22 @@ export function DashboardView() {
 
   return (
     <div>
+      <div className="mb-4 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-teal-400/25 bg-teal-400/8 px-4 py-3">
+          <p className="font-mono text-[11px] tracking-[0.16em] text-teal-300/80 uppercase">Nifty 50 window</p>
+          <p className="mt-1 text-sm text-zinc-300">Spot, session VWAP, PCR, ATM CE/PE, and the 15m playbook — isolated from Bank Nifty.</p>
+          <div className="mt-3">
+            <PopOutButton symbol="NIFTY" label="Open Nifty window" />
+          </div>
+        </div>
+        <div className="rounded-xl border border-sky-400/25 bg-sky-400/8 px-4 py-3">
+          <p className="font-mono text-[11px] tracking-[0.16em] text-sky-300/80 uppercase">Bank Nifty window</p>
+          <p className="mt-1 text-sm text-zinc-300">Separate live window so you can park Bank Nifty on a second monitor.</p>
+          <div className="mt-3">
+            <PopOutButton symbol="BANKNIFTY" label="Open Bank Nifty window" />
+          </div>
+        </div>
+      </div>
       <TapeBar tape={data.tape} clock={data.clock} session={data.session} source={data.source} />
       {data.sourceNote && <p className="mb-3 text-xs text-zinc-500">{data.sourceNote}</p>}
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
