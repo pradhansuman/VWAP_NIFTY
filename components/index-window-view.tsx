@@ -12,6 +12,8 @@ import { PlayChart } from "@/components/play-chart";
 import { cn } from "@/lib/utils";
 import { useLiveJson } from "@/lib/use-live-json";
 import { useQuotes } from "@/lib/use-quotes";
+import type { VwapMap } from "@/lib/vwap-context";
+import { VwapMapPanel } from "@/components/vwap-map-panel";
 import { Check, X } from "lucide-react";
 
 type Payload = {
@@ -37,7 +39,11 @@ type Payload = {
     vwapSeries: number[];
     rsiSeries: number[];
     sizing: OptionSizing | null;
+    pdVwap?: number | null;
+    pwVwap?: number | null;
+    tsizeSeries?: number[];
   };
+  vwapMap?: VwapMap;
   tape: {
     last: number;
     changePct: number;
@@ -193,6 +199,8 @@ export function IndexWindowView({
             </div>
           </div>
 
+          {data.vwapMap && <VwapMapPanel map={data.vwapMap} compact />}
+
           {snap.avoid && (
             <p className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-sm text-amber-100">{snap.avoid}</p>
           )}
@@ -203,7 +211,15 @@ export function IndexWindowView({
           <div className="grid gap-3 xl:grid-cols-[1.2fr_1fr]">
             <div className="rounded-xl border border-white/10 bg-white/4 p-3">
               <p className="mb-2 text-sm font-medium">15m VWAP + RSI</p>
-              <PlayChart bars={data.playbook.bars} vwapSeries={data.playbook.vwapSeries} rsiSeries={data.playbook.rsiSeries} snapshot={snap} />
+              <PlayChart
+                bars={data.playbook.bars}
+                vwapSeries={data.playbook.vwapSeries}
+                rsiSeries={data.playbook.rsiSeries}
+                snapshot={snap}
+                pdVwap={data.playbook.pdVwap}
+                pwVwap={data.playbook.pwVwap}
+                tsizeSeries={data.playbook.tsizeSeries}
+              />
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
               <div className={cn("rounded-xl border p-3", snap.long.ready ? "border-emerald-400/40 bg-emerald-400/8" : "border-emerald-400/20 bg-emerald-400/5")}>

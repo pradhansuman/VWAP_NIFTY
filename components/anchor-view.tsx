@@ -18,6 +18,7 @@ type Payload = {
   vwapSeries: number[];
   rsiSeries: number[];
   stance?: string;
+  addOk?: boolean;
   source?: string;
   symbols?: { symbol: string; name: string }[];
 };
@@ -99,9 +100,13 @@ export function AnchorView() {
   const stanceCopy = useMemo(() => {
     switch (data?.stance) {
       case "continuation_long":
-        return "Anchored VWAP is support and RSI slope is rising — treat dips as continuation, not exhaustion.";
+        return data.addOk === false
+          ? "Anchored VWAP is lost or large-print VWAP is leaking lower — the uptrend looks weaker. Do not add."
+          : "Holding the new-trend VWAP with a rising RSI slope. Dips into the anchor are continuation — adds are allowed while it holds.";
       case "continuation_short":
-        return "Anchored VWAP is resistance and RSI slope is falling — bounces are likely sells.";
+        return data.addOk === false
+          ? "Short-side anchor is lost or size is not confirming. Do not add shorts."
+          : "Anchored VWAP is resistance and RSI slope is falling — bounces are likely sells.";
       case "exhaustion_long":
         return "Price is extended above VWAP while RSI rolls over — exhaustion risk versus PCR longs.";
       case "exhaustion_short":
@@ -109,7 +114,7 @@ export function AnchorView() {
       default:
         return "VWAP location and RSI slope do not confirm each other yet.";
     }
-  }, [data?.stance]);
+  }, [data?.stance, data?.addOk]);
 
   return (
     <div className="space-y-4">
@@ -117,7 +122,7 @@ export function AnchorView() {
         <div>
           <h2 className="text-lg font-semibold">Anchored VWAP + RSI trend</h2>
           <p className="text-sm text-zinc-400">
-            Anchor to session open, weekly open, or the largest gap. RSI slope — not just the 30/70 level — confirms continuation versus exhaustion against your PCR bias.
+            Anchor to the start of a new trend (session open, weekly open, or the largest gap). Continuation can ride that anchored VWAP. If an uptrend loses it, the trend is weaker — do not add. RSI slope confirms whether the hold is continuation or exhaustion.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

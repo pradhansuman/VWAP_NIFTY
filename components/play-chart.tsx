@@ -9,19 +9,26 @@ export const PlayChart = memo(function PlayChart({
   vwapSeries,
   rsiSeries,
   snapshot,
+  pdVwap,
+  pwVwap,
+  tsizeSeries,
 }: {
   bars: Bar[];
   vwapSeries: number[];
   rsiSeries: number[];
   snapshot: PlaybookSnapshot;
+  pdVwap?: number | null;
+  pwVwap?: number | null;
+  tsizeSeries?: number[];
 }) {
   const w = 920;
   const h = 280;
   const rsiH = 90;
   const pad = 16;
   if (bars.length < 2) return <p className="text-sm text-zinc-500">Not enough 15m candles yet.</p>;
-  const min = Math.min(...bars.map((b) => b.low), ...vwapSeries.filter(Number.isFinite));
-  const max = Math.max(...bars.map((b) => b.high), ...vwapSeries.filter(Number.isFinite));
+  const extras = [pdVwap, pwVwap, ...(tsizeSeries ?? [])].filter((v): v is number => Number.isFinite(v as number));
+  const min = Math.min(...bars.map((b) => b.low), ...vwapSeries.filter(Number.isFinite), ...extras);
+  const max = Math.max(...bars.map((b) => b.high), ...vwapSeries.filter(Number.isFinite), ...extras);
   const range = Math.max(1e-6, max - min);
   const x = (i: number) => pad + (i / Math.max(1, bars.length - 1)) * (w - pad * 2);
   const y = (px: number) => pad + ((max - px) / range) * (h - pad * 2);
@@ -36,6 +43,11 @@ export const PlayChart = memo(function PlayChart({
   const vwapColor = snapshot.vwapTrend === "rising" ? "#34d399" : snapshot.vwapTrend === "falling" ? "#fb7185" : "#94a3b8";
   const setup = snapshot.setup;
   const rejIdx = setup ? bars.findIndex((b) => b.time === setup.rejectionTime) : -1;
+  const tsizeStart = tsizeSeries?.findIndex(Number.isFinite) ?? -1;
+  const tsizePath =
+    tsizeSeries
+      ?.map((v, i) => (Number.isFinite(v) ? `${i === tsizeStart ? "M" : "L"} ${x(i)} ${y(v)}` : ""))
+      .join(" ") ?? "";
 
   return (
     <div className="overflow-x-auto">
@@ -65,6 +77,13 @@ export const PlayChart = memo(function PlayChart({
             </g>
           );
         })}
+        {Number.isFinite(pdVwap as number) && (
+          <line x1={pad} x2={w - pad} y1={y(pdVwap!)} y2={y(pdVwap!)} stroke="#c4b5fd" strokeDasharray="5 4" strokeOpacity="0.9" />
+        )}
+        {Number.isFinite(pwVwap as number) && (
+          <line x1={pad} x2={w - pad} y1={y(pwVwap!)} y2={y(pwVwap!)} stroke="#38bdf8" strokeDasharray="2 5" strokeOpacity="0.7" />
+        )}
+        {tsizePath && <path d={tsizePath} fill="none" stroke="#f472b6" strokeWidth="1.4" strokeDasharray="4 3" />}
         <path d={vwapPath} fill="none" stroke={vwapColor} strokeWidth="1.8" />
       </svg>
       <svg viewBox={`0 0 ${w} ${rsiH}`} className="mt-2 h-auto w-full min-w-[520px]">
@@ -74,7 +93,7 @@ export const PlayChart = memo(function PlayChart({
         <path d={rsiPath} fill="none" stroke="#fbbf24" strokeWidth="1.5" />
       </svg>
       <p className="mt-1 text-[11px] text-zinc-500">
-        Teal VWAP = rising · rose VWAP = falling · amber candle = rejection · dashed white entry · green target 1:2 · red stop
+        Session VWAP (solid) · PD VWAP close (violet) · PW VWAP close (sky) · large-print t-size (pink) · amber rejection · dashed entry / stop / target
       </p>
     </div>
   );

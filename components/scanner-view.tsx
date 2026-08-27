@@ -42,7 +42,7 @@ export function ScannerView({ initial = null }: { initial?: Payload | null }) {
       <div className="mb-4">
         <h2 className="text-lg font-semibold">Intraday mean-reversion scanner</h2>
         <p className="text-sm text-zinc-400">
-          Flags names more than 2% away from session VWAP with RSI in oversold (&lt;30) or overbought (&gt;70) territory — the fade setups you would check on HDFC before chasing.
+          Flags names more than 2% away from session VWAP with RSI in oversold (&lt;30) or overbought (&gt;70). That stretch is only a fade if price actually spent time away from fair value — tagging VWAP all session is how you bleed. Previous-day VWAP close is the magnet/target, not a second entry.
         </p>
       </div>
       {data.hits.length === 0 ? (

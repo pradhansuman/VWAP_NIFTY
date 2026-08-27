@@ -19,6 +19,16 @@ export function istDateKey(ms: number) {
   return `${p.year}-${mm}-${dd}`;
 }
 
+/** IST week id = Monday date of that week. */
+export function istWeekKey(ms: number) {
+  return istDateKey(weekOpenUtc(ms));
+}
+
+export function istMonthKey(ms: number) {
+  const p = toIstParts(ms);
+  return `${p.year}-${String(p.month + 1).padStart(2, "0")}`;
+}
+
 export function istWallToUtc(year: number, month: number, date: number, hours: number, minutes: number) {
   return Date.UTC(year, month, date, hours, minutes) - IST_OFFSET_MS;
 }

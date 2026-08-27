@@ -26,6 +26,7 @@ Register that redirect URI on the Upstox developer app. Access tokens from the s
 
 | Surface | What it does |
 | --- | --- |
+| **VWAP map** | Session fair value, PD/PW/PM VWAP closes as magnets, fade-into-VWAP context, anchored add/don’t-add, large-print (t-size) VWAP |
 | **Nifty / Bank Nifty / Sensex windows** | Pop-outs: live LTP, 15m chart, CE/PE checklist, ATM rupee risk, India VIX, session veto. Entry / SL / target on the same screen. |
 | **Bitcoin** | Isolated BTCUSDT desk: UTC-day VWAP, MTF RSI, and Long/Short entry · stop · 1:2 target on the same screen |
 | **Stocks desk** | Combined Nifty 50 stocks MTF watchlist |

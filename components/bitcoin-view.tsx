@@ -3,10 +3,12 @@
 import { useLiveJson } from "@/lib/use-live-json";
 import type { Bar, Timeframe, WatchlistRow } from "@/lib/types";
 import type { PlaybookSnapshot } from "@/lib/playbook";
+import type { VwapMap } from "@/lib/vwap-context";
 import { TIMEFRAMES } from "@/lib/universe";
 import { pct, rsiLabel, usd } from "@/lib/format";
 import { Pill, Tone } from "@/components/pills";
 import { PlayChart } from "@/components/play-chart";
+import { VwapMapPanel } from "@/components/vwap-map-panel";
 import { cn } from "@/lib/utils";
 import { Check, X } from "lucide-react";
 
@@ -27,7 +29,11 @@ type Payload = {
     bars: Bar[];
     vwapSeries: number[];
     rsiSeries: number[];
+    pdVwap?: number | null;
+    pwVwap?: number | null;
+    tsizeSeries?: number[];
   };
+  vwapMap?: VwapMap;
 };
 
 function TfCell({ row, tf }: { row: WatchlistRow; tf: Timeframe }) {
@@ -133,6 +139,8 @@ export function BitcoinView({ initial = null }: { initial?: Payload | null }) {
             </div>
           </div>
 
+          {data.vwapMap && <VwapMapPanel map={data.vwapMap} kind="usd" compact />}
+
           {snap.avoid && (
             <p className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-sm text-amber-100">{snap.avoid}</p>
           )}
@@ -145,6 +153,9 @@ export function BitcoinView({ initial = null }: { initial?: Payload | null }) {
                 vwapSeries={data.playbook.vwapSeries}
                 rsiSeries={data.playbook.rsiSeries}
                 snapshot={snap}
+                pdVwap={data.playbook.pdVwap}
+                pwVwap={data.playbook.pwVwap}
+                tsizeSeries={data.playbook.tsizeSeries}
               />
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">

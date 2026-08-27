@@ -3,6 +3,7 @@ import { loadHistory, toChart } from "@/lib/desk";
 import { LIVE_UNIVERSE } from "@/lib/universe";
 import { anchoredVwap, detectDivergence, rsiState, vwapSeries, wilderRsi } from "@/lib/indicators";
 import { continuationVsExhaustion as confirm } from "@/lib/signals";
+import { buildVwapMap } from "@/lib/vwap-context";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,8 @@ export async function GET(request: Request) {
   const series = vwapSeries(pack.bars, pack.fromIndex);
   const rsiSeries = wilderRsi(pack.bars.map((b) => b.close));
   const stance = confirm(vwap.position, rsi);
+  const map = buildVwapMap(pack.bars.slice(pack.fromIndex), "ist");
+  const addOk = map.add.ok;
   return NextResponse.json({
     ...pack,
     source: history.source,
@@ -28,6 +31,8 @@ export async function GET(request: Request) {
     vwapSeries: series,
     rsiSeries,
     stance,
+    addOk,
+    addReason: map.add.reason,
     symbols: LIVE_UNIVERSE,
   });
 }

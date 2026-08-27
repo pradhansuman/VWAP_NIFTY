@@ -14,6 +14,7 @@ import {
   Landmark,
   Plug,
   Radar,
+  Waves,
   Workflow,
 } from "lucide-react";
 import { SourceChip } from "@/components/source-chip";
@@ -26,6 +27,7 @@ const LINKS = [
   { href: "/sensex", label: "Sensex", icon: BarChart3 },
   { href: "/bitcoin", label: "Bitcoin", icon: Coins },
   { href: "/", label: "Stocks desk", icon: Gauge },
+  { href: "/vwap", label: "VWAP map", icon: Waves },
   { href: "/scanner", label: "Mean reversion", icon: Radar },
   { href: "/anchor", label: "Anchored VWAP", icon: Crosshair },
   { href: "/confluence", label: "Confluence", icon: Workflow },

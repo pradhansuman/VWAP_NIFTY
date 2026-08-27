@@ -6,6 +6,7 @@ import { formatIstClock, sessionStatus } from "@/lib/session";
 import { evaluatePlaybook } from "@/lib/playbook";
 import { pickAtmLeg } from "@/lib/sizing";
 import { btcPlaybook } from "@/lib/bitcoin/desk";
+import { buildVwapMap } from "@/lib/vwap-context";
 
 export function dashboardPayload(pack: DeskPack, now: number) {
   return {
@@ -61,6 +62,8 @@ export function indexPayload(pack: IndexWindowPack, now: number) {
     ? { ...pack.atmPut, ltp: putRow?.timeframes["5m"].last ?? pack.atmPut.basePrice }
     : null;
   const sizing = pickAtmLeg(evaluated.snapshot.setup, call, put);
+  const vwapMap = buildVwapMap(pack.indexBars, "ist");
+  const playMap = buildVwapMap(evaluated.bars, "ist");
   return {
     generatedAt: now,
     clock: formatIstClock(now),
@@ -84,7 +87,11 @@ export function indexPayload(pack: IndexWindowPack, now: number) {
       vwapSeries: evaluated.vwap.slice(-80),
       rsiSeries: evaluated.rsi.slice(-80),
       sizing,
+      pdVwap: vwapMap.closes.pd,
+      pwVwap: vwapMap.closes.pw,
+      tsizeSeries: playMap.tsize.largeSeries.slice(-80),
     },
+    vwapMap,
     tape: {
       last: tf.last,
       changePct: tf.changePct,
@@ -109,6 +116,8 @@ export function bitcoinPayload(pack: BtcDesk, now: number) {
       month: "short",
     }).format(now) + " UTC";
   const evaluated = btcPlaybook(pack.bars);
+  const vwapMap = buildVwapMap(pack.bars, "utc");
+  const playMap = buildVwapMap(evaluated.bars, "utc");
   return {
     generatedAt: now,
     clock,
@@ -128,6 +137,10 @@ export function bitcoinPayload(pack: BtcDesk, now: number) {
       bars: evaluated.bars.slice(-80),
       vwapSeries: evaluated.vwap.slice(-80),
       rsiSeries: evaluated.rsi.slice(-80),
+      pdVwap: vwapMap.closes.pd,
+      pwVwap: vwapMap.closes.pw,
+      tsizeSeries: playMap.tsize.largeSeries.slice(-80),
     },
+    vwapMap,
   };
 }
