@@ -24,3 +24,23 @@ export function formatIstTime(ms: number) {
     month: "short",
   }).format(ms);
 }
+
+export function usd(n: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: n >= 1000 ? 2 : 2,
+    maximumFractionDigits: n >= 1000 ? 2 : 2,
+  }).format(n);
+}
+
+export function formatUtcTime(ms: number) {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "UTC",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    day: "2-digit",
+    month: "short",
+  }).format(ms) + " UTC";
+}

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Bar, Instrument } from "@/lib/types";
 import type { BacktestStats, BacktestTrade } from "@/lib/types";
 import type { ChecklistStep, PlaybookSnapshot } from "@/lib/playbook";
-import { formatIstTime, inr, rsiLabel } from "@/lib/format";
+import { formatIstTime, inr, rsiLabel, usd } from "@/lib/format";
 import { Pill } from "@/components/pills";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -129,9 +129,21 @@ function PlayChart({
   );
 }
 
-export function PlaybookView() {
+export function PlaybookView({
+  endpoint = "/api/playbook",
+  scanEndpoint = "/api/playbook/scan",
+  defaultSymbol = "NIFTY",
+  venue = "options",
+  showScan = true,
+}: {
+  endpoint?: string;
+  scanEndpoint?: string;
+  defaultSymbol?: string;
+  venue?: "options" | "spot";
+  showScan?: boolean;
+}) {
   const [tab, setTab] = useState<"live" | "scan" | "backtest">("live");
-  const [symbol, setSymbol] = useState("NIFTY");
+  const [symbol, setSymbol] = useState(defaultSymbol);
   const [live, setLive] = useState<LivePayload | null>(null);
   const [scans, setScans] = useState<ScanRow[] | null>(null);
   const [stats, setStats] = useState<(BacktestStats & { tradeCount: number }) | null>(null);
@@ -140,7 +152,7 @@ export function PlaybookView() {
 
   useEffect(() => {
     const ac = new AbortController();
-    fetch(`/api/playbook?symbol=${symbol}`, { signal: ac.signal })
+    fetch(`${endpoint}?symbol=${symbol}`, { signal: ac.signal })
       .then((r) => r.json())
       .then((json) => {
         if (json.error) throw new Error(json.error);
@@ -154,19 +166,19 @@ export function PlaybookView() {
         setLoading(false);
       });
     return () => ac.abort();
-  }, [symbol]);
+  }, [symbol, endpoint]);
 
   useEffect(() => {
     if (tab !== "scan") return;
-    fetch("/api/playbook/scan")
+    fetch(scanEndpoint)
       .then((r) => r.json())
       .then((json) => setScans(json.scans ?? json.all ?? []))
       .catch(() => setScans([]));
-  }, [tab]);
+  }, [tab, scanEndpoint]);
 
   function runBacktest() {
     setStats(null);
-    fetch(`/api/playbook?symbol=${symbol}&mode=backtest`)
+    fetch(`${endpoint}?symbol=${symbol}&mode=backtest`)
       .then((r) => r.json())
       .then((json) => setStats(json.stats))
       .catch(() => setError("Backtest failed."));
@@ -174,19 +186,21 @@ export function PlaybookView() {
 
   const snap = live?.snapshot;
   const symbols = live?.symbols ?? [];
+  const longName = venue === "spot" ? "Long BTC" : "Buy CE";
+  const shortName = venue === "spot" ? "Short BTC" : "Buy PE";
   const statusCopy = useMemo(() => {
     if (!snap) return "";
     if (snap.avoid) return snap.avoid;
     if (snap.setup?.status === "entry")
       return snap.setup.side === "long"
-        ? "Buy CE — rejection high is broken. Stop at rejection low, target 1:2."
-        : "Buy PE — rejection low is broken. Stop at rejection high, target 1:2.";
+        ? `${longName} — rejection high is broken. Stop at rejection low, target 1:2.`
+        : `${shortName} — rejection low is broken. Stop at rejection high, target 1:2.`;
     if (snap.setup?.status === "wait_breakout")
       return snap.setup.side === "long"
         ? "Rejection printed. Wait for a 15m close/break above the rejection high."
         : "Rejection printed. Wait for a 15m close/break below the rejection low.";
     return "Trend with VWAP, wait for a pullback rejection, confirm with RSI, enter on the breakout.";
-  }, [snap]);
+  }, [snap, longName, shortName]);
 
   return (
     <div className="space-y-4">
@@ -195,26 +209,32 @@ export function PlaybookView() {
           <p className="font-mono text-[11px] tracking-[0.16em] text-teal-300/80 uppercase">15-minute playbook</p>
           <h2 className="text-lg font-semibold">VWAP + RSI rejection breakout</h2>
           <p className="text-sm text-zinc-400">
-            Trend with session VWAP · momentum with RSI 14 · entry on the rejection breakout · 1:2 target. Buy CE on the long; buy PE on the short.
+            {venue === "spot"
+              ? "UTC-day VWAP on BTCUSDT · RSI 14 · rejection breakout · 1:2. Long on the green path, short on the red path."
+              : "Trend with session VWAP · momentum with RSI 14 · entry on the rejection breakout · 1:2 target. Buy CE on the long; buy PE on the short."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {(["live", "scan", "backtest"] as const).map((t) => (
+          {(["live", "scan", "backtest"] as const)
+            .filter((t) => showScan || t !== "scan")
+            .map((t) => (
             <Button key={t} size="sm" variant={tab === t ? "default" : "outline"} onClick={() => setTab(t)}>
               {t === "live" ? "Live setup" : t === "scan" ? "Watchlist scan" : "Backtest 1:2"}
             </Button>
           ))}
-          <select
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value)}
-            className="h-7 rounded-lg border border-white/10 bg-[#0c1a22] px-2 text-sm"
-          >
-            {(symbols.length ? symbols : [{ symbol: "NIFTY", name: "Nifty 50" }]).map((u) => (
-              <option key={u.symbol} value={u.symbol}>
-                {u.symbol}
-              </option>
-            ))}
-          </select>
+          {venue === "options" && (
+            <select
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              className="h-7 rounded-lg border border-white/10 bg-[#0c1a22] px-2 text-sm"
+            >
+              {(symbols.length ? symbols : [{ symbol: "NIFTY", name: "Nifty 50" }]).map((u) => (
+                <option key={u.symbol} value={u.symbol}>
+                  {u.symbol}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
@@ -224,8 +244,8 @@ export function PlaybookView() {
       {tab === "live" && snap && live && !loading && (
         <>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-            <Stat label="Last (15m)" value={inr(snap.last)} />
-            <Stat label="Session VWAP" value={inr(snap.vwap)} hint={snap.vwapTrend} />
+            <Stat label="Last (15m)" value={venue === "spot" ? usd(snap.last) : inr(snap.last)} />
+            <Stat label={venue === "spot" ? "UTC VWAP" : "Session VWAP"} value={venue === "spot" ? usd(snap.vwap) : inr(snap.vwap)} hint={snap.vwapTrend} />
             <Stat label="RSI 14" value={rsiLabel(snap.rsi)} hint={snap.rsiRising ? "rising" : "falling"} />
             <Stat label="Bias" value={snap.priceSide === "above" ? "Above VWAP" : snap.priceSide === "below" ? "Below VWAP" : "At VWAP"} />
             <Stat
@@ -240,7 +260,7 @@ export function PlaybookView() {
           <div className="grid gap-3 lg:grid-cols-2">
             <Card className="border-emerald-400/25 bg-emerald-400/5">
               <CardHeader className="border-b border-emerald-400/15">
-                <CardTitle className="text-emerald-200">Buy CE / Long</CardTitle>
+                <CardTitle className="text-emerald-200">{longName}</CardTitle>
                 <CardDescription>VWAP rising · pullback · bullish rejection · RSI &gt; 50 rising · break rejection high</CardDescription>
               </CardHeader>
               <CardContent className="pt-4">
@@ -250,7 +270,7 @@ export function PlaybookView() {
             </Card>
             <Card className="border-rose-400/25 bg-rose-400/5">
               <CardHeader className="border-b border-rose-400/15">
-                <CardTitle className="text-rose-200">Buy PE / Short</CardTitle>
+                <CardTitle className="text-rose-200">{shortName}</CardTitle>
                 <CardDescription>VWAP falling · pullback · bearish rejection · RSI &lt; 50 falling · break rejection low</CardDescription>
               </CardHeader>
               <CardContent className="pt-4">
@@ -393,7 +413,9 @@ export function PlaybookView() {
                       {stats.trades.map((t: BacktestTrade, i: number) => (
                         <TableRow key={`${t.entryTime}-${i}`} className="border-white/10">
                           <TableCell>
-                            <Pill tone={t.side === "long" ? "long" : "short"}>{t.side === "long" ? "CE" : "PE"}</Pill>
+                            <Pill tone={t.side === "long" ? "long" : "short"}>
+                              {t.side === "long" ? (venue === "spot" ? "Long" : "CE") : venue === "spot" ? "Short" : "PE"}
+                            </Pill>
                           </TableCell>
                           <TableCell className="font-mono text-xs">
                             {formatIstTime(t.entryTime)} · {inr(t.entry)}

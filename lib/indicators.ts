@@ -236,13 +236,13 @@ export function aggregateSessionBars(bars: Bar[], sizeMs: number): Bar[] {
   return out;
 }
 
-export function sessionResetVwapSeries(bars: Bar[]): number[] {
+export function sessionResetVwapSeries(bars: Bar[], dayKey: (ms: number) => string = istDateKey): number[] {
   const out: number[] = [];
   let pv = 0;
   let vol = 0;
   let day = "";
   for (const bar of bars) {
-    const key = istDateKey(bar.time);
+    const key = dayKey(bar.time);
     if (key !== day) {
       day = key;
       pv = 0;
@@ -255,6 +255,10 @@ export function sessionResetVwapSeries(bars: Bar[]): number[] {
     out.push(pv / vol);
   }
   return out;
+}
+
+export function utcDateKey(ms: number) {
+  return new Date(ms).toISOString().slice(0, 10);
 }
 
 export function atr(bars: Bar[], period = 14) {

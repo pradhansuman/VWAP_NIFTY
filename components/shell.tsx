@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BookOpen, Crosshair, Gauge, Plug, Radar, Workflow } from "lucide-react";
+import { Activity, BookOpen, Coins, Crosshair, Gauge, Plug, Radar, Workflow } from "lucide-react";
 import { SourceChip } from "@/components/source-chip";
 import { cn } from "@/lib/utils";
 
@@ -13,27 +13,31 @@ const LINKS = [
   { href: "/confluence", label: "Confluence", icon: Workflow },
   { href: "/playbook", label: "15m playbook", icon: BookOpen },
   { href: "/backtest", label: "Backtest", icon: Activity },
+  { href: "/bitcoin", label: "Bitcoin", icon: Coins },
   { href: "/connect", label: "Upstox", icon: Plug },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const bitcoin = pathname.startsWith("/bitcoin");
   return (
     <div className="flex min-h-full flex-col bg-[#071018] text-zinc-100">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#071018]/90 backdrop-blur">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-3">
           <div className="min-w-0">
             <p className="font-mono text-[11px] tracking-[0.18em] text-teal-300/80 uppercase">
-              Nifty options desk
+              {bitcoin ? "Bitcoin desk" : "Nifty options desk"}
             </p>
             <h1 className="truncate text-base font-semibold tracking-tight sm:text-lg">
-              VWAP + RSI applications
+              {bitcoin ? "BTCUSDT VWAP + RSI" : "VWAP + RSI applications"}
             </h1>
           </div>
           <div className="flex min-w-0 flex-col items-end gap-2 sm:max-w-md">
-            <SourceChip />
+            {!bitcoin && <SourceChip />}
             <p className="hidden text-right text-xs text-zinc-400 sm:block">
-              Session VWAP bands, RSI slope, and PCR bias on a Nifty 50 / options watchlist.
+              {bitcoin
+                ? "UTC-day VWAP and RSI on live BTCUSDT. Isolated from the Nifty tape."
+                : "Session VWAP bands, RSI slope, and PCR bias on a Nifty 50 / options watchlist."}
             </p>
           </div>
         </div>
@@ -47,7 +51,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 href={link.href}
                 className={cn(
                   "inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors",
-                  active
+                  active || (link.href === "/bitcoin" && bitcoin)
                     ? "bg-teal-400/15 text-teal-200"
                     : "text-zinc-400 hover:bg-white/5 hover:text-zinc-100",
                 )}

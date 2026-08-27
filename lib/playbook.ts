@@ -1,5 +1,5 @@
 import type { BacktestStats, BacktestTrade, Bar } from "@/lib/types";
-import { aggregateSessionBars, sessionResetVwapSeries, wilderRsi } from "@/lib/indicators";
+import { aggregateBars, aggregateSessionBars, sessionResetVwapSeries, utcDateKey, wilderRsi } from "@/lib/indicators";
 import { istDateKey } from "@/lib/session";
 
 export const PLAYBOOK = {
@@ -8,6 +8,14 @@ export const PLAYBOOK = {
   riskReward: 2,
   touchPct: 0.15,
 };
+
+export type PlaybookOpts = {
+  clock?: "ist" | "utc";
+};
+
+function dayKey(clock: PlaybookOpts["clock"]) {
+  return clock === "utc" ? utcDateKey : istDateKey;
+}
 
 export type StepId =
   | "vwap_trend"
@@ -61,8 +69,8 @@ export type PlaybookSnapshot = {
 
 const FIFTEEN = 15 * 60 * 1000;
 
-export function toFifteen(bars5m: Bar[]) {
-  return aggregateSessionBars(bars5m, FIFTEEN);
+export function toFifteen(bars5m: Bar[], clock: PlaybookOpts["clock"] = "ist") {
+  return clock === "utc" ? aggregateBars(bars5m, FIFTEEN) : aggregateSessionBars(bars5m, FIFTEEN);
 }
 
 export function rsiGuide(value: number): { key: RsiGuide; label: string } {
@@ -208,9 +216,10 @@ function shortSetupAt(
   };
 }
 
-export function evaluatePlaybook(bars5m: Bar[]): { bars: Bar[]; vwap: number[]; rsi: number[]; snapshot: PlaybookSnapshot } {
-  const bars = toFifteen(bars5m);
-  const vwap = sessionResetVwapSeries(bars);
+export function evaluatePlaybook(bars5m: Bar[], opts: PlaybookOpts = {}): { bars: Bar[]; vwap: number[]; rsi: number[]; snapshot: PlaybookSnapshot } {
+  const clock = opts.clock ?? "ist";
+  const bars = toFifteen(bars5m, clock);
+  const vwap = sessionResetVwapSeries(bars, dayKey(clock));
   const rsi = wilderRsi(
     bars.map((b) => b.close),
     PLAYBOOK.rsiLength,
@@ -322,9 +331,11 @@ export function evaluatePlaybook(bars5m: Bar[]): { bars: Bar[]; vwap: number[]; 
   };
 }
 
-export function backtestPlaybook(bars5m: Bar[]): BacktestStats {
-  const bars = toFifteen(bars5m);
-  const vwap = sessionResetVwapSeries(bars);
+export function backtestPlaybook(bars5m: Bar[], opts: PlaybookOpts = {}): BacktestStats {
+  const clock = opts.clock ?? "ist";
+  const keyFn = dayKey(clock);
+  const bars = toFifteen(bars5m, clock);
+  const vwap = sessionResetVwapSeries(bars, keyFn);
   const rsi = wilderRsi(
     bars.map((b) => b.close),
     PLAYBOOK.rsiLength,
@@ -349,11 +360,11 @@ export function backtestPlaybook(bars5m: Bar[]): BacktestStats {
     const stop = raw.stop;
     const risk = Math.abs(entry - stop);
     const target = raw.side === "long" ? entry + PLAYBOOK.riskReward * risk : entry - PLAYBOOK.riskReward * risk;
-    const session = istDateKey(entryBar.time);
+    const session = keyFn(entryBar.time);
     let exit = entryBar.close;
     let exitTime = entryBar.time;
     let reason = "time";
-    for (let j = confirm; j < bars.length && istDateKey(bars[j].time) === session; j++) {
+    for (let j = confirm; j < bars.length && keyFn(bars[j].time) === session; j++) {
       const bar = bars[j];
       if (raw.side === "long") {
         if (bar.low <= stop) {

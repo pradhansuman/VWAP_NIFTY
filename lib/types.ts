@@ -1,6 +1,6 @@
 export type Timeframe = "5m" | "15m" | "1h" | "1D";
 
-export type InstrumentKind = "index" | "stock" | "option";
+export type InstrumentKind = "index" | "stock" | "option" | "crypto";
 
 export type Instrument = {
   symbol: string;
@@ -11,7 +11,7 @@ export type Instrument = {
   instrumentKey?: string;
 };
 
-export type DataSource = "upstox" | "simulated";
+export type DataSource = "upstox" | "binance" | "simulated";
 
 export type Bar = {
   time: number;

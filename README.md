@@ -29,7 +29,7 @@ Register that redirect URI on the Upstox developer app. Access tokens from the s
 | **Mean reversion** | Names >2% from VWAP with RSI &lt;30 or &gt;70 |
 | **Anchored VWAP** | Session open, weekly open, or largest gap, with RSI slope |
 | **Confluence** | VWAP reclaim/reject aligned with RSI divergence or slope |
-| **15m playbook** | VWAP rejection-breakout: Buy CE / Buy PE, RSI 50 filter, 1:2 stops |
+| **Bitcoin** | Isolated BTCUSDT desk: UTC VWAP, MTF RSI, 15m long/short playbook |
 | **Backtest** | VWAP-reclaim entries, RSI gates, ATR stop, R-multiple target |
 | **Upstox** | Token / OAuth connect |
 | **Pine** | `pine/vwap-rsi-confluence.pine` and `pine/vwap-rsi-15m-rejection.pine` |
