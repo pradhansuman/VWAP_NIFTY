@@ -25,8 +25,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full">
+      <body className="min-h-full" style={{ isolation: "isolate" }} suppressHydrationWarning>
         <TooltipProvider>
           <Shell>{children}</Shell>
         </TooltipProvider>
