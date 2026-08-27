@@ -46,4 +46,44 @@ npm run dev
 
 Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
 
-Not investment advice.
+## Deploy on Cloudflare
+
+This is a Next.js server app (API routes + Upstox/Binance fetches). It ships to **Cloudflare Workers** via OpenNext.
+
+1. Install the [Wrangler CLI login](https://developers.cloudflare.com/workers/wrangler/install-and-update/):
+
+```bash
+npx wrangler login
+```
+
+2. Put secrets on the Worker (never commit tokens):
+
+```bash
+npx wrangler secret put UPSTOX_ACCESS_TOKEN
+npx wrangler secret put UPSTOX_API_KEY
+npx wrangler secret put UPSTOX_API_SECRET
+```
+
+3. Deploy:
+
+```bash
+npm run deploy
+```
+
+That prints a `*.workers.dev` URL. Add the same origin as the Upstox redirect:
+
+```bash
+npx wrangler secret put UPSTOX_REDIRECT_URI
+# value: https://nifty-vwap-desk.<your-subdomain>.workers.dev/api/upstox/callback
+```
+
+Register that callback on the Upstox developer app. Redeploy is not required after changing secrets; refresh `/connect` if the token was only in cookies.
+
+Local Workers preview (same runtime as production):
+
+```bash
+cp .dev.vars.example .dev.vars   # fill tokens; file is gitignored
+npm run preview
+```
+
+Without a token the live simulator still loads. Not investment advice.

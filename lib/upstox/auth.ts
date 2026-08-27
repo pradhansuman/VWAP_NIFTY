@@ -30,6 +30,7 @@ export function cookieOptions() {
     sameSite: "lax" as const,
     path: "/",
     maxAge: TOKEN_MAX_AGE,
+    secure: process.env.NODE_ENV === "production",
   };
 }
 
