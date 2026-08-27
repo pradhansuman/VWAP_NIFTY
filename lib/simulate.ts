@@ -81,9 +81,9 @@ export function generateSessionBars(
     } else if (scenario === "reclaim_short") {
       drift = progress < 0.62 ? 0.00028 : -0.00055;
     } else if (scenario === "fade_short") {
-      drift = progress < 0.78 ? 0.00072 : -0.00015;
+      drift = progress < 0.52 ? -0.00006 : 0.00105 + (i % 5 === 0 ? -0.00055 : 0);
     } else if (scenario === "fade_long") {
-      drift = progress < 0.78 ? -0.00072 : 0.00015;
+      drift = progress < 0.52 ? 0.00006 : -0.00105 + (i % 5 === 0 ? 0.00055 : 0);
     }
     const noise = gaussian(rand) * instrument.basePrice * 0.00055;
     const open = price;
