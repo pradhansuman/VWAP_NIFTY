@@ -6,6 +6,7 @@ import { getCreds } from "@/lib/upstox/auth";
 import { fetchFiveMinuteBars } from "@/lib/upstox/candles";
 import { fetchNiftyAtm, pcrBias } from "@/lib/upstox/chain";
 import { mapPool } from "@/lib/upstox/client";
+import { createSWR } from "@/lib/swr";
 
 export type DeskPack = {
   source: DataSource;
@@ -24,7 +25,7 @@ export function resolveInstrument(symbol: string) {
   return extraInstruments.get(symbol) ?? getInstrument(symbol);
 }
 
-const deskCache = new Map<string, { at: number; pack: DeskPack }>();
+const deskCache = createSWR<DeskPack>(8_000, 90_000);
 
 function simulatedDesk(nowMs: number, note: string): DeskPack {
   const rows = UNIVERSE.map((instrument) => {
@@ -46,8 +47,13 @@ async function liveDesk(token: string, nowMs: number): Promise<DeskPack> {
   if (atm) {
     liveNames.push(atm.call, atm.put);
   }
-  const series = await mapPool(liveNames, 4, async (instrument) => {
-    const bars = await fetchFiveMinuteBars(token, instrument.instrumentKey!, nowMs);
+  const series = await mapPool(liveNames, 8, async (instrument) => {
+    const bars = await fetchFiveMinuteBars(
+      token,
+      instrument.instrumentKey!,
+      nowMs,
+      instrument.kind === "option" ? 3 : 5,
+    );
     return { instrument, bars };
   });
   const usable = series.filter((s) => s.bars.length >= 20);
@@ -70,25 +76,19 @@ async function liveDesk(token: string, nowMs: number): Promise<DeskPack> {
 export async function loadDesk(request?: Request, nowMs = Date.now()): Promise<DeskPack> {
   const { accessToken } = getCreds(request);
   const cacheKey = accessToken ? `upstox:${accessToken.slice(-8)}` : "sim";
-  const cached = deskCache.get(cacheKey);
-  if (cached && nowMs - cached.at < 15_000) return cached.pack;
-
-  if (!accessToken) {
-    const pack = simulatedDesk(nowMs, "No Upstox access token — using the session simulator.");
-    deskCache.set(cacheKey, { at: nowMs, pack });
-    return pack;
-  }
-  try {
-    const pack = await liveDesk(accessToken, nowMs);
-    rememberInstruments(pack.symbols);
-    deskCache.set(cacheKey, { at: nowMs, pack });
-    return pack;
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Upstox request failed";
-    const pack = simulatedDesk(nowMs, `Upstox fallback: ${message}`);
-    deskCache.set(cacheKey, { at: nowMs, pack });
-    return pack;
-  }
+  return deskCache.getOrLoad(cacheKey, nowMs, async () => {
+    if (!accessToken) {
+      return simulatedDesk(nowMs, "No Upstox access token — using the session simulator.");
+    }
+    try {
+      const pack = await liveDesk(accessToken, nowMs);
+      rememberInstruments(pack.symbols);
+      return pack;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Upstox request failed";
+      return simulatedDesk(nowMs, `Upstox fallback: ${message}`);
+    }
+  });
 }
 
 export async function loadHistory(symbol: string, request?: Request, nowMs = Date.now()) {

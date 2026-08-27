@@ -5,6 +5,7 @@ import { snapshotFromBars } from "@/lib/signals";
 import { fetchBtcFiveMinute } from "@/lib/bitcoin/feed";
 import { flattenBars, generateHistory } from "@/lib/simulate";
 import { evaluatePlaybook, backtestPlaybook } from "@/lib/playbook";
+import { createSWR } from "@/lib/swr";
 
 export const BTC: Instrument = {
   symbol: "BTCUSDT",
@@ -75,26 +76,30 @@ function simulatedBtc(nowMs: number, note: string): BtcDesk {
   };
 }
 
+const btcCache = createSWR<BtcDesk>(8_000, 60_000);
+
 export async function loadBitcoinDesk(nowMs = Date.now()): Promise<BtcDesk> {
-  try {
-    const { bars, source } = await fetchBtcFiveMinute(nowMs);
-    const timeframes = Object.fromEntries(TIMEFRAMES.map((tf) => [tf, snapshot(bars, tf)])) as WatchlistRow["timeframes"];
-    const sides = TIMEFRAMES.map((tf) => timeframes[tf].confluence.side);
-    const longs = sides.filter((s) => s === "long").length;
-    const shorts = sides.filter((s) => s === "short").length;
-    const composite =
-      longs >= 3 && shorts === 0 ? "long" : shorts >= 3 && longs === 0 ? "short" : longs && shorts ? "mixed" : "flat";
-    return {
-      source: "binance",
-      sourceNote: `Live ${source} BTCUSDT 5m candles · UTC-day VWAP`,
-      instrument: BTC,
-      bars,
-      row: { instrument: BTC, pcr: 1, pcrBias: "neutral", timeframes, composite },
-    };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Bitcoin feed failed";
-    return simulatedBtc(nowMs, `Bitcoin fallback: ${message}`);
-  }
+  return btcCache.getOrLoad("BTCUSDT", nowMs, async () => {
+    try {
+      const { bars, source } = await fetchBtcFiveMinute(nowMs);
+      const timeframes = Object.fromEntries(TIMEFRAMES.map((tf) => [tf, snapshot(bars, tf)])) as WatchlistRow["timeframes"];
+      const sides = TIMEFRAMES.map((tf) => timeframes[tf].confluence.side);
+      const longs = sides.filter((s) => s === "long").length;
+      const shorts = sides.filter((s) => s === "short").length;
+      const composite =
+        longs >= 3 && shorts === 0 ? "long" : shorts >= 3 && longs === 0 ? "short" : longs && shorts ? "mixed" : "flat";
+      return {
+        source: "binance" as const,
+        sourceNote: `Live ${source} BTCUSDT 5m candles · UTC-day VWAP`,
+        instrument: BTC,
+        bars,
+        row: { instrument: BTC, pcr: 1, pcrBias: "neutral", timeframes, composite },
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Bitcoin feed failed";
+      return simulatedBtc(nowMs, `Bitcoin fallback: ${message}`);
+    }
+  });
 }
 
 export function btcPlaybook(bars: Bar[]) {

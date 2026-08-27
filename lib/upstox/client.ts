@@ -62,10 +62,15 @@ export function parseCandles(raw: unknown): Bar[] {
 }
 
 export async function mapPool<T, R>(items: T[], size: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = [];
-  for (let i = 0; i < items.length; i += size) {
-    const chunk = await Promise.all(items.slice(i, i + size).map(fn));
-    out.push(...chunk);
+  const out: R[] = new Array(items.length);
+  let cursor = 0;
+  async function worker() {
+    while (cursor < items.length) {
+      const i = cursor++;
+      out[i] = await fn(items[i]);
+    }
   }
+  const n = Math.max(1, Math.min(size, items.length));
+  await Promise.all(Array.from({ length: n }, () => worker()));
   return out;
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { loadDesk, loadHistory } from "@/lib/desk";
+import { mapPool } from "@/lib/upstox/client";
 import { evaluatePlaybook, type PlaybookSnapshot } from "@/lib/playbook";
 import type { Instrument } from "@/lib/types";
 
@@ -7,16 +8,14 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const desk = await loadDesk(request);
-  const scans: { instrument: Instrument; snapshot: PlaybookSnapshot }[] = [];
-  for (const instrument of desk.symbols) {
-    const history = await loadHistory(instrument.symbol, request);
-    if (!history) continue;
-    const { snapshot } = evaluatePlaybook(history.bars);
-    scans.push({
-      instrument,
-      snapshot,
-    });
-  }
+  const scans = (
+    await mapPool(desk.symbols, 8, async (instrument) => {
+      const history = await loadHistory(instrument.symbol, request);
+      if (!history) return null;
+      const { snapshot } = evaluatePlaybook(history.bars);
+      return { instrument, snapshot };
+    })
+  ).filter((row): row is { instrument: Instrument; snapshot: PlaybookSnapshot } => row !== null);
   const actionable = scans
     .filter((s) => s.snapshot.setup || s.snapshot.long.ready || s.snapshot.short.ready)
     .sort((a, b) => {

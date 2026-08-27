@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { Instrument, Timeframe, WatchlistRow } from "@/lib/types";
 import { TIMEFRAMES } from "@/lib/universe";
 import { inr, pct, rsiLabel } from "@/lib/format";
@@ -9,14 +9,7 @@ import { PlaybookView } from "@/components/playbook-view";
 import { PopOutButton } from "@/components/popout-button";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-type Tape = {
-  last: number;
-  changePct: number;
-  vwap: { vwap: number; deviationPct: number; position: string };
-  rsi: { value: number; trend: string };
-  confluence: { side: string; label: string; reason: string };
-};
+import { useLiveJson } from "@/lib/use-live-json";
 
 type Payload = {
   clock: string;
@@ -29,7 +22,13 @@ type Payload = {
   pcrBias: "bullish" | "bearish" | "neutral";
   symbols: Instrument[];
   rows: WatchlistRow[];
-  tape: Tape;
+  tape: {
+    last: number;
+    changePct: number;
+    vwap: { vwap: number; deviationPct: number; position: string };
+    rsi: { value: number; trend: string };
+    confluence: { side: string; label: string; reason: string };
+  };
 };
 
 function TfCell({ row, tf }: { row: WatchlistRow; tf: Timeframe }) {
@@ -55,39 +54,19 @@ function TfCell({ row, tf }: { row: WatchlistRow; tf: Timeframe }) {
   );
 }
 
+export type IndexWindowPayload = Payload;
+
 export function IndexWindowView({
   symbol,
   compact = false,
+  initial = null,
 }: {
   symbol: "NIFTY" | "BANKNIFTY";
   compact?: boolean;
+  initial?: Payload | null;
 }) {
   const [tab, setTab] = useState<"tape" | "playbook">("tape");
-  const [data, setData] = useState<Payload | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = () => {
-      fetch(`/api/index/${symbol}`)
-        .then((r) => r.json())
-        .then((json) => {
-          if (cancelled) return;
-          if (json.error) throw new Error(json.error);
-          setError(null);
-          setData(json);
-        })
-        .catch(() => {
-          if (!cancelled) setError(`Could not load the ${symbol} window.`);
-        });
-    };
-    load();
-    const id = window.setInterval(load, 20_000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
-  }, [symbol]);
+  const { data, error } = useLiveJson<Payload>(`/api/index/${symbol}`, initial, 20_000);
 
   const accent = symbol === "BANKNIFTY" ? "border-sky-400/25 bg-sky-400/8" : "border-teal-400/25 bg-teal-400/8";
 

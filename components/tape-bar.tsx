@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { TimeframeSnapshot } from "@/lib/types";
+import type { DataSource, TimeframeSnapshot } from "@/lib/types";
 import { inr, pct } from "@/lib/format";
 import { Pill, Tone } from "@/components/pills";
 
@@ -21,7 +21,7 @@ export function TapeBar({
   tape: Tape;
   clock: string;
   session: string;
-  source?: "upstox" | "simulated";
+  source?: DataSource;
 }) {
   const [liveClock, setLiveClock] = useState(clock);
   useEffect(() => {

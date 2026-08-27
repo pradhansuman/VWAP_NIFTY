@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { ScannerHit, TimeframeSnapshot } from "@/lib/types";
+import { useLiveJson } from "@/lib/use-live-json";
+import type { DataSource, ScannerHit, TimeframeSnapshot } from "@/lib/types";
 import { inr, pct, rsiLabel } from "@/lib/format";
 import { Pill } from "@/components/pills";
 import { TapeBar } from "@/components/tape-bar";
@@ -10,22 +10,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 type Payload = {
   clock: string;
   session: string;
-  source?: "upstox" | "simulated";
+  source?: DataSource;
   sourceNote?: string;
   tape: { nifty: TimeframeSnapshot; bank: TimeframeSnapshot; pcr: number; pcrBias: "bullish" | "bearish" | "neutral" };
   hits: ScannerHit[];
 };
 
-export function ScannerView() {
-  const [data, setData] = useState<Payload | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/scanner")
-      .then((r) => r.json())
-      .then(setData)
-      .catch(() => setError("Scanner failed to load."));
-  }, []);
+export function ScannerView({ initial = null }: { initial?: Payload | null }) {
+  const { data, error } = useLiveJson<Payload>("/api/scanner", initial, 20_000);
 
   if (error) {
     return <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</p>;

@@ -1,5 +1,5 @@
-import { IndexWindowView } from "@/components/index-window-view";
+import { IndexWindowPage } from "@/components/index-window-page";
 
 export default function Page() {
-  return <IndexWindowView symbol="NIFTY" />;
+  return <IndexWindowPage symbol="NIFTY" />;
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { loadDesk, loadHistory, toChart } from "@/lib/desk";
+import { loadHistory, toChart } from "@/lib/desk";
+import { LIVE_UNIVERSE } from "@/lib/universe";
 import { anchoredVwap, detectDivergence, rsiState, vwapSeries, wilderRsi } from "@/lib/indicators";
 import { continuationVsExhaustion as confirm } from "@/lib/signals";
 
@@ -18,7 +19,6 @@ export async function GET(request: Request) {
   const series = vwapSeries(pack.bars, pack.fromIndex);
   const rsiSeries = wilderRsi(pack.bars.map((b) => b.close));
   const stance = confirm(vwap.position, rsi);
-  const desk = await loadDesk(request);
   return NextResponse.json({
     ...pack,
     source: history.source,
@@ -28,6 +28,6 @@ export async function GET(request: Request) {
     vwapSeries: series,
     rsiSeries,
     stance,
-    symbols: desk.symbols,
+    symbols: LIVE_UNIVERSE,
   });
 }

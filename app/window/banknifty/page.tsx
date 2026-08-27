@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import { IndexWindowView } from "@/components/index-window-view";
+import { IndexWindowPage } from "@/components/index-window-page";
 
-export const metadata: Metadata = {
-  title: "Bank Nifty — live window",
-};
+export const metadata: Metadata = { title: "Bank Nifty — live window" };
 
 export default function Page() {
-  return <IndexWindowView symbol="BANKNIFTY" compact />;
+  return <IndexWindowPage symbol="BANKNIFTY" compact />;
 }

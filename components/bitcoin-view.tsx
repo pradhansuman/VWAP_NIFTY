@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useLiveJson } from "@/lib/use-live-json";
 import type { Timeframe, WatchlistRow } from "@/lib/types";
 import { TIMEFRAMES } from "@/lib/universe";
 import { pct, rsiLabel, usd } from "@/lib/format";
@@ -9,20 +10,18 @@ import { PlaybookView } from "@/components/playbook-view";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-type Tape = {
-  last: number;
-  changePct: number;
-  vwap: { vwap: number; deviationPct: number; position: string };
-  rsi: { value: number; trend: string };
-  confluence: { side: string; label: string; reason: string };
-};
-
 type Payload = {
   clock: string;
   source: string;
   sourceNote: string;
   row: WatchlistRow;
-  tape: Tape;
+  tape: {
+    last: number;
+    changePct: number;
+    vwap: { vwap: number; deviationPct: number; position: string };
+    rsi: { value: number; trend: string };
+    confluence: { side: string; label: string; reason: string };
+  };
 };
 
 function TfCell({ row, tf }: { row: WatchlistRow; tf: Timeframe }) {
@@ -48,17 +47,9 @@ function TfCell({ row, tf }: { row: WatchlistRow; tf: Timeframe }) {
   );
 }
 
-export function BitcoinView() {
+export function BitcoinView({ initial = null }: { initial?: Payload | null }) {
   const [tab, setTab] = useState<"tape" | "playbook">("tape");
-  const [data, setData] = useState<Payload | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/bitcoin")
-      .then((r) => r.json())
-      .then(setData)
-      .catch(() => setError("Could not load Bitcoin candles."));
-  }, []);
+  const { data, error } = useLiveJson<Payload>("/api/bitcoin", initial, 20_000);
 
   return (
     <div className="space-y-4">

@@ -7,6 +7,7 @@ import { fetchFiveMinuteBars } from "@/lib/upstox/candles";
 import { fetchIndexAtm, pcrBias } from "@/lib/upstox/chain";
 import { mapPool } from "@/lib/upstox/client";
 import { rememberInstruments } from "@/lib/desk";
+import { createSWR } from "@/lib/swr";
 
 export const INDEX_WINDOWS = {
   NIFTY: {
@@ -42,6 +43,8 @@ export type IndexWindowPack = {
   pcrBias: WatchlistRow["pcrBias"];
 };
 
+const windowCache = createSWR<IndexWindowPack>(8_000, 90_000);
+
 function simulatedWindow(id: IndexWindowId, nowMs: number, note: string): IndexWindowPack {
   const meta = INDEX_WINDOWS[id];
   const instrument = getInstrument(meta.symbol)!;
@@ -67,34 +70,40 @@ export async function loadIndexWindow(id: IndexWindowId, request?: Request, nowM
   const { accessToken } = getCreds(request);
   if (!accessToken) return simulatedWindow(id, nowMs, "No Upstox token — simulator on this window.");
 
-  try {
-    const atm = await fetchIndexAtm(accessToken, meta.underlyingKey, meta.prefix, meta.displayName).catch(() => null);
-    const names: Instrument[] = [instrument];
-    if (atm) names.push(atm.call, atm.put);
-    const series = await mapPool(names, 3, async (item) => {
-      const bars = await fetchFiveMinuteBars(accessToken, item.instrumentKey!, nowMs);
-      return { instrument: item, bars };
-    });
-    const usable = series.filter((s) => s.bars.length >= 20);
-    if (!usable.length) throw new Error("No candles for this index.");
-    const pcr = atm?.pcr ?? 1;
-    const bias = pcrBias(pcr);
-    const rows = buildRows(usable, pcr, bias);
-    rememberInstruments(usable.map((s) => s.instrument));
-    return {
-      source: "upstox",
-      sourceNote: atm
-        ? `Live Upstox ${meta.title} · PCR ${pcr.toFixed(2)} · ATM ${atm.call.symbol}/${atm.put.symbol}`
-        : `Live Upstox ${meta.title} (option chain unavailable).`,
-      meta,
-      instrument,
-      rows,
-      symbols: usable.map((s) => s.instrument),
-      pcr,
-      pcrBias: bias,
-    };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Index window failed";
-    return simulatedWindow(id, nowMs, `Upstox fallback: ${message}`);
-  }
+  return windowCache.getOrLoad(`${id}:${accessToken.slice(-8)}`, nowMs, async () => {
+    try {
+      const [atm, indexBars] = await Promise.all([
+        fetchIndexAtm(accessToken, meta.underlyingKey, meta.prefix, meta.displayName, nowMs).catch(() => null),
+        fetchFiveMinuteBars(accessToken, instrument.instrumentKey!, nowMs, 5),
+      ]);
+      const optionSeries = atm
+        ? await mapPool([atm.call, atm.put], 2, async (item) => {
+            const bars = await fetchFiveMinuteBars(accessToken, item.instrumentKey!, nowMs, 3);
+            return { instrument: item, bars };
+          })
+        : [];
+      const series = [{ instrument, bars: indexBars }, ...optionSeries];
+      const usable = series.filter((s) => s.bars.length >= 20);
+      if (!usable.length) throw new Error("No candles for this index.");
+      const pcr = atm?.pcr ?? 1;
+      const bias = pcrBias(pcr);
+      const rows = buildRows(usable, pcr, bias);
+      rememberInstruments(usable.map((s) => s.instrument));
+      return {
+        source: "upstox" as const,
+        sourceNote: atm
+          ? `Live Upstox ${meta.title} · PCR ${pcr.toFixed(2)} · ATM ${atm.call.symbol}/${atm.put.symbol}`
+          : `Live Upstox ${meta.title} (option chain unavailable).`,
+        meta,
+        instrument,
+        rows,
+        symbols: usable.map((s) => s.instrument),
+        pcr,
+        pcrBias: bias,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Index window failed";
+      return simulatedWindow(id, nowMs, `Upstox fallback: ${message}`);
+    }
+  });
 }

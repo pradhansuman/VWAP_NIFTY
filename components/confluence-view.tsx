@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useLiveJson } from "@/lib/use-live-json";
 import type { Instrument, TimeframeSnapshot } from "@/lib/types";
 import { inr, rsiLabel } from "@/lib/format";
 import { Pill } from "@/components/pills";
@@ -13,16 +13,9 @@ type Signal = {
   tf: TimeframeSnapshot;
 };
 
-export function ConfluenceView() {
-  const [signals, setSignals] = useState<Signal[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/confluence")
-      .then((r) => r.json())
-      .then((json) => setSignals(json.signals))
-      .catch(() => setError("Could not load confluence signals."));
-  }, []);
+export function ConfluenceView({ initial = null }: { initial?: { signals: Signal[] } | null }) {
+  const { data, error } = useLiveJson<{ signals: Signal[] }>("/api/confluence", initial, 20_000);
+  const signals = data?.signals ?? null;
 
   if (error) {
     return <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</p>;

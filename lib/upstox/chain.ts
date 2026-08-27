@@ -1,5 +1,6 @@
 import type { Instrument } from "@/lib/types";
 import { upstoxGet } from "@/lib/upstox/client";
+import { createTtlCache } from "@/lib/swr";
 
 type MarketData = {
   ltp?: number;
@@ -38,6 +39,8 @@ export type ChainSummary = {
   put: Instrument;
 };
 
+const chainCache = createTtlCache<ChainSummary | null>(45_000);
+
 function num(v: unknown) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
@@ -49,18 +52,19 @@ function nearestExpiry(contracts: Contract[], nowMs = Date.now()) {
   return expiries.find((d) => d >= today) ?? expiries.at(-1) ?? null;
 }
 
-export async function fetchIndexAtm(
+async function fetchIndexAtmUncached(
   token: string,
   underlyingKey: string,
   prefix: string,
   displayName: string,
+  nowMs: number,
 ): Promise<ChainSummary | null> {
   const contracts = await upstoxGet<Contract[]>(
     `/v2/option/contract?instrument_key=${encodeURIComponent(underlyingKey)}`,
     token,
   );
   if (!Array.isArray(contracts) || contracts.length === 0) return null;
-  const expiry = nearestExpiry(contracts);
+  const expiry = nearestExpiry(contracts, nowMs);
   if (!expiry) return null;
   const data = await upstoxGet<ChainRow[]>(
     `/v2/option/chain?instrument_key=${encodeURIComponent(underlyingKey)}&expiry_date=${expiry}`,
@@ -107,6 +111,18 @@ export async function fetchIndexAtm(
       instrumentKey: putKey,
     },
   };
+}
+
+export function fetchIndexAtm(
+  token: string,
+  underlyingKey: string,
+  prefix: string,
+  displayName: string,
+  nowMs = Date.now(),
+): Promise<ChainSummary | null> {
+  return chainCache.getOrLoad(`${underlyingKey}:${prefix}`, nowMs, () =>
+    fetchIndexAtmUncached(token, underlyingKey, prefix, displayName, nowMs),
+  );
 }
 
 export function fetchNiftyAtm(token: string) {

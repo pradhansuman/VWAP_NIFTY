@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, memo } from "react";
 import type { Bar, Instrument } from "@/lib/types";
 import type { BacktestStats, BacktestTrade } from "@/lib/types";
 import type { ChecklistStep, PlaybookSnapshot } from "@/lib/playbook";
@@ -52,7 +52,7 @@ function StepList({ steps, tone }: { steps: ChecklistStep[]; tone: "long" | "sho
   );
 }
 
-function PlayChart({
+const PlayChart = memo(function PlayChart({
   bars,
   vwapSeries,
   rsiSeries,
@@ -77,13 +77,12 @@ function PlayChart({
   const vwapPath = vwapSeries
     .map((v, i) => (Number.isFinite(v) ? `${i === 0 ? "M" : "L"} ${x(i)} ${y(v)}` : ""))
     .join(" ");
+  const rsiStart = rsiSeries.findIndex(Number.isFinite);
   const rsiPath = rsiSeries
-    .map((v, i) => (Number.isFinite(v) ? `${i === rsiSeries.findIndex(Number.isFinite) ? "M" : "L"} ${x(i)} ${rsiY(v)}` : ""))
+    .map((v, i) => (Number.isFinite(v) ? `${i === rsiStart ? "M" : "L"} ${x(i)} ${rsiY(v)}` : ""))
     .join(" ");
   const vwapColor = snapshot.vwapTrend === "rising" ? "#34d399" : snapshot.vwapTrend === "falling" ? "#fb7185" : "#94a3b8";
   const setup = snapshot.setup;
-  const rej = setup ? bars.length - 1 - ( /* approx last bars */ 0) : -1;
-  void rej;
   const rejIdx = setup ? bars.findIndex((b) => b.time === setup.rejectionTime) : -1;
 
   return (
@@ -127,7 +126,7 @@ function PlayChart({
       </p>
     </div>
   );
-}
+});
 
 export function PlaybookView({
   endpoint = "/api/playbook",

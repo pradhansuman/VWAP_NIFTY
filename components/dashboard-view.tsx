@@ -1,20 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { TIMEFRAMES } from "@/lib/universe";
-import type { Timeframe, WatchlistRow } from "@/lib/types";
+import type { DataSource, Timeframe, WatchlistRow } from "@/lib/types";
 import { inr, rsiLabel } from "@/lib/format";
 import { Pill } from "@/components/pills";
 import { TapeBar } from "@/components/tape-bar";
 import { PopOutButton } from "@/components/popout-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { useLiveJson } from "@/lib/use-live-json";
 import { cn } from "@/lib/utils";
 
 type Payload = {
   clock: string;
   session: string;
-  source?: "upstox" | "simulated";
+  source?: DataSource;
   sourceNote?: string;
   tape: Parameters<typeof TapeBar>[0]["tape"];
   rows: WatchlistRow[];
@@ -44,26 +45,10 @@ function TfCell({ row, tf }: { row: WatchlistRow; tf: Timeframe }) {
   );
 }
 
-export function DashboardView() {
-  const [data, setData] = useState<Payload | null>(null);
-  const [error, setError] = useState<string | null>(null);
+export function DashboardView({ initial = null }: { initial?: Payload | null }) {
+  const { data, error } = useLiveJson<Payload>("/api/dashboard", initial, 20_000);
   const [q, setQ] = useState("");
   const [kind, setKind] = useState("all");
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/dashboard")
-      .then((r) => r.json())
-      .then((json) => {
-        if (!cancelled) setData(json);
-      })
-      .catch(() => {
-        if (!cancelled) setError("Could not load the watchlist.");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   if (error) {
     return <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</p>;

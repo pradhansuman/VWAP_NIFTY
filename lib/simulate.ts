@@ -102,7 +102,7 @@ export function generateSessionBars(
   return bars;
 }
 
-export function generateHistory(instrument: Instrument, nowMs: number, sessions = 18) {
+export function generateHistory(instrument: Instrument, nowMs: number, sessions = 8) {
   let cursor = nowMs;
   const days: { dateMs: number; bars: Bar[] }[] = [];
   let prevClose = instrument.basePrice;

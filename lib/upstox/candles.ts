@@ -1,32 +1,52 @@
 import type { Bar } from "@/lib/types";
 import { istDateKey } from "@/lib/session";
 import { encodeKey, parseCandles, upstoxGet } from "@/lib/upstox/client";
+import { createTtlCache } from "@/lib/swr";
 
 type CandlePayload = { candles?: unknown[] };
 
-const candleCache = new Map<string, { at: number; bars: Bar[] }>();
-const TTL_MS = 20_000;
+const historical = createTtlCache<Bar[]>(6 * 60 * 60 * 1000);
+const intraday = createTtlCache<Bar[]>(8_000);
 
 function istYmd(ms: number) {
   return istDateKey(ms);
 }
 
-export async function fetchFiveMinuteBars(token: string, instrumentKey: string, nowMs = Date.now()): Promise<Bar[]> {
-  const cacheKey = `${instrumentKey}:5m`;
-  const hit = candleCache.get(cacheKey);
-  if (hit && nowMs - hit.at < TTL_MS) return hit.bars;
+function mergeBars(left: Bar[], right: Bar[]): Bar[] {
+  if (!right.length) return left;
+  if (!left.length) return right;
+  const byTime = new Map<number, Bar>();
+  for (const bar of left) byTime.set(bar.time, bar);
+  for (const bar of right) byTime.set(bar.time, bar);
+  return [...byTime.values()].sort((a, b) => a.time - b.time);
+}
 
+export async function fetchFiveMinuteBars(
+  token: string,
+  instrumentKey: string,
+  nowMs = Date.now(),
+  lookbackDays = 5,
+): Promise<Bar[]> {
   const to = istYmd(nowMs);
-  const fromMs = nowMs - 12 * 86400000;
-  const from = istYmd(fromMs);
+  const from = istYmd(nowMs - lookbackDays * 86400000);
   const encoded = encodeKey(instrumentKey);
 
-  const [historical, intraday] = await Promise.all([
-    upstoxGet<CandlePayload>(`/v3/historical-candle/${encoded}/minutes/5/${to}/${from}`, token).catch(() => ({ candles: [] })),
-    upstoxGet<CandlePayload>(`/v3/historical-candle/intraday/${encoded}/minutes/5`, token).catch(() => ({ candles: [] })),
+  const [hist, intra] = await Promise.all([
+    historical.getOrLoad(`${instrumentKey}:${from}:${to}`, nowMs, async () => {
+      const payload = await upstoxGet<CandlePayload>(
+        `/v3/historical-candle/${encoded}/minutes/5/${to}/${from}`,
+        token,
+      ).catch(() => ({ candles: [] as unknown[] }));
+      return parseCandles(payload.candles ?? []);
+    }),
+    intraday.getOrLoad(`${instrumentKey}:intra`, nowMs, async () => {
+      const payload = await upstoxGet<CandlePayload>(
+        `/v3/historical-candle/intraday/${encoded}/minutes/5`,
+        token,
+      ).catch(() => ({ candles: [] as unknown[] }));
+      return parseCandles(payload.candles ?? []);
+    }),
   ]);
 
-  const bars = parseCandles([...(historical.candles ?? []), ...(intraday.candles ?? [])]);
-  candleCache.set(cacheKey, { at: nowMs, bars });
-  return bars;
+  return mergeBars(hist, intra);
 }
