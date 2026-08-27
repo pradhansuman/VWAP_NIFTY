@@ -17,11 +17,15 @@ export function TapeBar({
   clock,
   session,
   source,
+  liveNifty,
+  liveBank,
 }: {
   tape: Tape;
   clock: string;
   session: string;
   source?: DataSource;
+  liveNifty?: number;
+  liveBank?: number;
 }) {
   const [liveClock, setLiveClock] = useState(clock);
   useEffect(() => {
@@ -46,7 +50,7 @@ export function TapeBar({
     <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
       <div className="rounded-xl border border-white/10 bg-white/4 px-3 py-2">
         <p className="text-[11px] text-zinc-400">Nifty 50 · 5m VWAP</p>
-        <p className="font-mono text-lg tabular-nums">{inr(tape.nifty.last, 2)}</p>
+        <p className="font-mono text-lg tabular-nums">{inr(liveNifty ?? tape.nifty.last, 2)}</p>
         <div className="mt-1 flex items-center gap-2 text-xs">
           <Tone value={tape.nifty.changePct} />
           <span className="text-zinc-500">vs VWAP {pct(tape.nifty.vwap.deviationPct)}</span>
@@ -54,7 +58,7 @@ export function TapeBar({
       </div>
       <div className="rounded-xl border border-white/10 bg-white/4 px-3 py-2">
         <p className="text-[11px] text-zinc-400">Bank Nifty</p>
-        <p className="font-mono text-lg tabular-nums">{inr(tape.bank.last, 2)}</p>
+        <p className="font-mono text-lg tabular-nums">{inr(liveBank ?? tape.bank.last, 2)}</p>
         <div className="mt-1 flex items-center gap-2 text-xs">
           <Tone value={tape.bank.changePct} />
           <Pill tone={tape.bank.vwap.position === "above" ? "long" : tape.bank.vwap.position === "below" ? "short" : "neutral"}>
@@ -63,7 +67,7 @@ export function TapeBar({
         </div>
       </div>
       <div className="rounded-xl border border-white/10 bg-white/4 px-3 py-2">
-        <p className="text-[11px] text-zinc-400">{source === "upstox" ? "Index PCR (Upstox chain)" : "Index PCR (sim)"}</p>
+        <p className="text-[11px] text-zinc-400">Nifty 50 PCR (index only)</p>
         <p className="font-mono text-lg tabular-nums">{tape.pcr.toFixed(2)}</p>
         <div className="mt-1">
           <Pill tone={tape.pcrBias === "bullish" ? "long" : tape.pcrBias === "bearish" ? "short" : "neutral"}>

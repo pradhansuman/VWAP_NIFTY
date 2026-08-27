@@ -72,7 +72,7 @@ function simulatedBtc(nowMs: number, note: string): BtcDesk {
     sourceNote: note,
     instrument: BTC,
     bars,
-    row: { instrument: BTC, pcr: 1, pcrBias: "neutral", timeframes, composite: "flat" },
+    row: { instrument: BTC, pcr: null, pcrBias: null, timeframes, composite: "flat" },
   };
 }
 
@@ -93,7 +93,7 @@ export async function loadBitcoinDesk(nowMs = Date.now()): Promise<BtcDesk> {
         sourceNote: `Live ${source} BTCUSDT 5m candles · UTC-day VWAP`,
         instrument: BTC,
         bars,
-        row: { instrument: BTC, pcr: 1, pcrBias: "neutral", timeframes, composite },
+        row: { instrument: BTC, pcr: null, pcrBias: null, timeframes, composite },
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : "Bitcoin feed failed";

@@ -45,8 +45,9 @@ function snapshot(all: Bar[], tf: Timeframe): TimeframeSnapshot {
 
 export function buildRows(
   series: { instrument: Instrument; bars: Bar[] }[],
-  pcr: number,
+  pcr: number | null,
   pcrBias: WatchlistRow["pcrBias"],
+  pcrOn: (instrument: Instrument) => boolean = (instrument) => instrument.kind === "index",
 ): WatchlistRow[] {
   return series.map(({ instrument, bars }) => {
     const timeframes = Object.fromEntries(TIMEFRAMES.map((tf) => [tf, snapshot(bars, tf)])) as WatchlistRow["timeframes"];
@@ -55,7 +56,14 @@ export function buildRows(
     const shorts = sides.filter((s) => s === "short").length;
     const composite =
       longs >= 3 && shorts === 0 ? "long" : shorts >= 3 && longs === 0 ? "short" : longs && shorts ? "mixed" : "flat";
-    return { instrument, pcr, pcrBias, timeframes, composite };
+    const showPcr = pcrOn(instrument);
+    return {
+      instrument,
+      pcr: showPcr ? pcr : null,
+      pcrBias: showPcr ? pcrBias : null,
+      timeframes,
+      composite,
+    };
   });
 }
 
@@ -69,7 +77,7 @@ export function getHistory(symbol: string, nowMs = Date.now()) {
 export function getWatchlist(nowMs = Date.now()): WatchlistRow[] {
   return UNIVERSE.map((instrument) => {
     const bars = flattenBars(generateHistory(instrument, nowMs));
-    const { pcr, bias } = pcrFor(instrument.symbol, nowMs);
+    const { pcr, bias } = instrument.kind === "index" ? pcrFor(instrument.symbol, nowMs) : { pcr: null, bias: null };
     return buildRows([{ instrument, bars }], pcr, bias)[0];
   });
 }
@@ -149,8 +157,8 @@ export function niftyTape(rows: WatchlistRow[], nowMs = Date.now()) {
   return {
     nifty: nifty.timeframes["5m"],
     bank: bank.timeframes["5m"],
-    pcr: nifty.pcr,
-    pcrBias: nifty.pcrBias,
+    pcr: nifty.pcr ?? 1,
+    pcrBias: nifty.pcrBias ?? "neutral",
     generatedAt: nowMs,
   };
 }

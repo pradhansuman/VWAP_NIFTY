@@ -8,8 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 type Signal = {
   instrument: Instrument;
-  pcr: number;
-  pcrBias: "bullish" | "bearish" | "neutral";
+  pcr: number | null;
+  pcrBias: "bullish" | "bearish" | "neutral" | null;
   tf: TimeframeSnapshot;
 };
 
@@ -62,9 +62,11 @@ export function ConfluenceView({ initial = null }: { initial?: { signals: Signal
                 <p>{s.tf.confluence.reason}</p>
                 <p className="text-xs text-zinc-500">{s.tf.divergence.note}</p>
                 <div className="flex flex-wrap gap-2 pt-1">
-                  <Pill tone={s.pcrBias === "bullish" ? "long" : s.pcrBias === "bearish" ? "short" : "neutral"}>
-                    PCR {s.pcr.toFixed(2)} {s.pcrBias}
-                  </Pill>
+                  {s.instrument.kind === "index" && s.pcr != null && (
+                    <Pill tone={s.pcrBias === "bullish" ? "long" : s.pcrBias === "bearish" ? "short" : "neutral"}>
+                      PCR {s.pcr.toFixed(2)} {s.pcrBias}
+                    </Pill>
+                  )}
                   <Pill>RSI {rsiLabel(s.tf.rsi.value)}</Pill>
                   <Pill>{s.tf.vwap.position} VWAP</Pill>
                 </div>

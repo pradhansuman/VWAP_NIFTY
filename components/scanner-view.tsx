@@ -1,6 +1,7 @@
 "use client";
 
 import { useLiveJson } from "@/lib/use-live-json";
+import { useQuotes } from "@/lib/use-quotes";
 import type { DataSource, ScannerHit, TimeframeSnapshot } from "@/lib/types";
 import { inr, pct, rsiLabel } from "@/lib/format";
 import { Pill } from "@/components/pills";
@@ -17,7 +18,8 @@ type Payload = {
 };
 
 export function ScannerView({ initial = null }: { initial?: Payload | null }) {
-  const { data, error } = useLiveJson<Payload>("/api/scanner", initial, 20_000);
+  const { data, error } = useLiveJson<Payload>("/api/scanner", initial, 30_000);
+  const quotes = useQuotes(["NSE_INDEX|Nifty 50", "NSE_INDEX|Nifty Bank"], 3000);
 
   if (error) {
     return <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</p>;
@@ -28,7 +30,14 @@ export function ScannerView({ initial = null }: { initial?: Payload | null }) {
 
   return (
     <div>
-      <TapeBar tape={data.tape} clock={data.clock} session={data.session} source={data.source} />
+      <TapeBar
+        tape={data.tape}
+        clock={data.clock}
+        session={data.session}
+        source={data.source}
+        liveNifty={quotes["NSE_INDEX|Nifty 50"]?.last}
+        liveBank={quotes["NSE_INDEX|Nifty Bank"]?.last}
+      />
       {data.sourceNote && <p className="mb-3 text-xs text-zinc-500">{data.sourceNote}</p>}
       <div className="mb-4">
         <h2 className="text-lg font-semibold">Intraday mean-reversion scanner</h2>

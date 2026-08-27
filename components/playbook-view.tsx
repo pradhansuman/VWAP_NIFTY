@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState, memo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Bar, Instrument } from "@/lib/types";
 import type { BacktestStats, BacktestTrade } from "@/lib/types";
-import type { ChecklistStep, PlaybookSnapshot } from "@/lib/playbook";
+import type { ChecklistStep, PlaybookSnapshot, PlaySetup } from "@/lib/playbook";
+import type { OptionSizing } from "@/lib/sizing";
 import { formatIstTime, inr, rsiLabel, usd } from "@/lib/format";
 import { Pill } from "@/components/pills";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { Check, X } from "lucide-react";
+import { PlayChart } from "@/components/play-chart";
 
 type LivePayload = {
   symbol: string;
@@ -21,6 +23,7 @@ type LivePayload = {
   vwapSeries: number[];
   rsiSeries: number[];
   symbols: Instrument[];
+  sizing?: OptionSizing | null;
 };
 
 type ScanRow = { instrument: Instrument; snapshot: PlaybookSnapshot };
@@ -51,82 +54,6 @@ function StepList({ steps, tone }: { steps: ChecklistStep[]; tone: "long" | "sho
     </ol>
   );
 }
-
-const PlayChart = memo(function PlayChart({
-  bars,
-  vwapSeries,
-  rsiSeries,
-  snapshot,
-}: {
-  bars: Bar[];
-  vwapSeries: number[];
-  rsiSeries: number[];
-  snapshot: PlaybookSnapshot;
-}) {
-  const w = 920;
-  const h = 280;
-  const rsiH = 90;
-  const pad = 16;
-  if (bars.length < 2) return <p className="text-sm text-zinc-500">Not enough 15m candles yet.</p>;
-  const min = Math.min(...bars.map((b) => b.low), ...vwapSeries.filter(Number.isFinite));
-  const max = Math.max(...bars.map((b) => b.high), ...vwapSeries.filter(Number.isFinite));
-  const range = Math.max(1e-6, max - min);
-  const x = (i: number) => pad + (i / Math.max(1, bars.length - 1)) * (w - pad * 2);
-  const y = (px: number) => pad + ((max - px) / range) * (h - pad * 2);
-  const rsiY = (v: number) => 8 + ((100 - v) / 100) * (rsiH - 16);
-  const vwapPath = vwapSeries
-    .map((v, i) => (Number.isFinite(v) ? `${i === 0 ? "M" : "L"} ${x(i)} ${y(v)}` : ""))
-    .join(" ");
-  const rsiStart = rsiSeries.findIndex(Number.isFinite);
-  const rsiPath = rsiSeries
-    .map((v, i) => (Number.isFinite(v) ? `${i === rsiStart ? "M" : "L"} ${x(i)} ${rsiY(v)}` : ""))
-    .join(" ");
-  const vwapColor = snapshot.vwapTrend === "rising" ? "#34d399" : snapshot.vwapTrend === "falling" ? "#fb7185" : "#94a3b8";
-  const setup = snapshot.setup;
-  const rejIdx = setup ? bars.findIndex((b) => b.time === setup.rejectionTime) : -1;
-
-  return (
-    <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${w} ${h}`} className="h-auto w-full min-w-[640px]">
-        {setup && Number.isFinite(setup.entry) && (
-          <>
-            <line x1={pad} x2={w - pad} y1={y(setup.target)} y2={y(setup.target)} stroke="#34d399" strokeDasharray="6 4" strokeOpacity="0.85" />
-            <line x1={pad} x2={w - pad} y1={y(setup.entry)} y2={y(setup.entry)} stroke="#e2e8f0" strokeDasharray="4 3" strokeOpacity="0.8" />
-            <line x1={pad} x2={w - pad} y1={y(setup.stop)} y2={y(setup.stop)} stroke="#fb7185" strokeDasharray="6 4" strokeOpacity="0.85" />
-          </>
-        )}
-        {bars.map((bar, i) => {
-          const up = bar.close >= bar.open;
-          const isRej = i === rejIdx;
-          return (
-            <g key={bar.time}>
-              <line x1={x(i)} x2={x(i)} y1={y(bar.high)} y2={y(bar.low)} stroke={isRej ? "#fbbf24" : up ? "#34d399" : "#fb7185"} strokeWidth={isRej ? 2 : 1} />
-              <line
-                x1={x(i)}
-                x2={x(i)}
-                y1={y(bar.open)}
-                y2={y(bar.close)}
-                stroke={isRej ? "#fbbf24" : up ? "#34d399" : "#fb7185"}
-                strokeWidth={isRej ? 5 : 3}
-                strokeLinecap="round"
-              />
-            </g>
-          );
-        })}
-        <path d={vwapPath} fill="none" stroke={vwapColor} strokeWidth="1.8" />
-      </svg>
-      <svg viewBox={`0 0 ${w} ${rsiH}`} className="mt-2 h-auto w-full min-w-[640px]">
-        <line x1={pad} x2={w - pad} y1={rsiY(55)} y2={rsiY(55)} stroke="#34d399" strokeOpacity="0.25" />
-        <line x1={pad} x2={w - pad} y1={rsiY(50)} y2={rsiY(50)} stroke="#94a3b8" strokeOpacity="0.45" />
-        <line x1={pad} x2={w - pad} y1={rsiY(45)} y2={rsiY(45)} stroke="#fb7185" strokeOpacity="0.25" />
-        <path d={rsiPath} fill="none" stroke="#fbbf24" strokeWidth="1.5" />
-      </svg>
-      <p className="mt-1 text-[11px] text-zinc-500">
-        Teal VWAP = rising · rose VWAP = falling · amber candle = rejection · dashed white entry · green target 1:2 · red stop
-      </p>
-    </div>
-  );
-});
 
 export function PlaybookView({
   endpoint = "/api/playbook",
@@ -192,6 +119,8 @@ export function PlaybookView({
   const statusCopy = useMemo(() => {
     if (!snap) return "";
     if (snap.avoid) return snap.avoid;
+    if (!snap.actionable && snap.setup)
+      return "Setup is on the tape but the session/VIX veto is on — do not fire.";
     if (snap.setup?.status === "entry")
       return snap.setup.side === "long"
         ? `${longName} — rejection high is broken. Stop at rejection low, target 1:2.`
@@ -252,12 +181,24 @@ export function PlaybookView({
             <Stat
               label="Setup"
               value={
-                snap.setup
-                  ? `${venue === "spot" ? (snap.setup.side === "long" ? "Long" : "Short") : snap.setup.option} ${snap.setup.status === "entry" ? "ENTRY" : "wait"}`
-                  : "None"
+                !snap.actionable && snap.sessionVeto
+                  ? "Veto"
+                  : snap.setup
+                    ? `${venue === "spot" ? (snap.setup.side === "long" ? "Long" : "Short") : snap.setup.option} ${snap.setup.status === "entry" ? "ENTRY" : "wait"}`
+                    : "None"
               }
             />
           </div>
+          {snap.vix && venue === "options" && (
+            <p className="text-xs text-zinc-500">
+              India VIX {snap.vix.last.toFixed(2)} · {snap.vix.changePct >= 0 ? "+" : ""}
+              {snap.vix.changePct.toFixed(1)}% · {snap.vix.regime}
+              {snap.vix.elevated ? " · elevated" : ""} — {snap.vix.note}
+            </p>
+          )}
+          {snap.sessionWindow && venue === "options" && (
+            <p className="text-xs text-zinc-500">Session window: {snap.sessionWindow.label}</p>
+          )}
           {snap.avoid && (
             <p className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">{snap.avoid}</p>
           )}
@@ -270,7 +211,7 @@ export function PlaybookView({
               </CardHeader>
               <CardContent className="pt-4">
                 <StepList steps={snap.long.steps} tone="long" />
-                {snap.setup?.side === "long" && <Levels setup={snap.setup} />}
+                {snap.setup?.side === "long" && <Levels setup={snap.setup} sizing={live.sizing} />}
               </CardContent>
             </Card>
             <Card className="border-rose-400/25 bg-rose-400/5">
@@ -280,7 +221,7 @@ export function PlaybookView({
               </CardHeader>
               <CardContent className="pt-4">
                 <StepList steps={snap.short.steps} tone="short" />
-                {snap.setup?.side === "short" && <Levels setup={snap.setup} />}
+                {snap.setup?.side === "short" && <Levels setup={snap.setup} sizing={live.sizing} />}
               </CardContent>
             </Card>
           </div>
@@ -444,21 +385,48 @@ export function PlaybookView({
   );
 }
 
-function Levels({ setup }: { setup: NonNullable<PlaybookSnapshot["setup"]> }) {
+function Levels({ setup, sizing }: { setup: PlaySetup; sizing?: OptionSizing | null }) {
   return (
-    <div className="mt-4 grid grid-cols-3 gap-2 rounded-lg bg-black/25 p-3 font-mono text-xs">
-      <div>
-        <p className="text-zinc-500">Entry</p>
-        <p>{inr(setup.entry)}</p>
+    <div className="mt-4 space-y-2">
+      <div className="grid grid-cols-3 gap-2 rounded-lg bg-black/25 p-3 font-mono text-xs">
+        <div>
+          <p className="text-zinc-500">Index entry</p>
+          <p>{inr(setup.entry)}</p>
+        </div>
+        <div>
+          <p className="text-zinc-500">SL</p>
+          <p className="text-rose-300">{inr(setup.stop)}</p>
+        </div>
+        <div>
+          <p className="text-zinc-500">Target 1:2</p>
+          <p className="text-emerald-300">{inr(setup.target)}</p>
+        </div>
       </div>
-      <div>
-        <p className="text-zinc-500">SL</p>
-        <p className="text-rose-300">{inr(setup.stop)}</p>
-      </div>
-      <div>
-        <p className="text-zinc-500">Target 1:2</p>
-        <p className="text-emerald-300">{inr(setup.target)}</p>
-      </div>
+      {sizing && (
+        <div className="rounded-lg border border-white/10 bg-black/20 p-3 text-xs">
+          <p className="mb-2 text-zinc-400">
+            {sizing.symbol} · lot {sizing.lot} · LTP {inr(sizing.ltp)} · 1-lot debit ₹{inr(sizing.debit, 0)} · ATM Δ {sizing.delta}
+          </p>
+          <div className="grid grid-cols-2 gap-2 font-mono sm:grid-cols-4">
+            <div>
+              <p className="text-zinc-500">Premium SL</p>
+              <p className="text-rose-300">{inr(sizing.premiumStop)}</p>
+            </div>
+            <div>
+              <p className="text-zinc-500">Premium tgt</p>
+              <p className="text-emerald-300">{inr(sizing.premiumTarget)}</p>
+            </div>
+            <div>
+              <p className="text-zinc-500">₹ risk / lot</p>
+              <p className="text-rose-300">{inr(sizing.rupeeRisk, 0)}</p>
+            </div>
+            <div>
+              <p className="text-zinc-500">₹ target / lot</p>
+              <p className="text-emerald-300">{inr(sizing.rupeeTarget, 0)}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

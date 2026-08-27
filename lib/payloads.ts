@@ -3,6 +3,8 @@ import type { IndexWindowPack } from "@/lib/index-window";
 import type { BtcDesk } from "@/lib/bitcoin/desk";
 import { getScanner, niftyTape } from "@/lib/market";
 import { formatIstClock, sessionStatus } from "@/lib/session";
+import { evaluatePlaybook } from "@/lib/playbook";
+import { pickAtmLeg } from "@/lib/sizing";
 
 export function dashboardPayload(pack: DeskPack, now: number) {
   return {
@@ -48,6 +50,16 @@ export function confluencePayload(pack: DeskPack) {
 export function indexPayload(pack: IndexWindowPack, now: number) {
   const indexRow = pack.rows.find((r) => r.instrument.symbol === pack.instrument.symbol) ?? pack.rows[0];
   const tf = indexRow.timeframes["5m"];
+  const evaluated = evaluatePlaybook(pack.indexBars, { clock: "ist", nowMs: now, vix: pack.vix });
+  const callRow = pack.rows.find((r) => r.instrument.kind === "option" && r.instrument.symbol.endsWith("CE"));
+  const putRow = pack.rows.find((r) => r.instrument.kind === "option" && r.instrument.symbol.endsWith("PE"));
+  const call = pack.atmCall
+    ? { ...pack.atmCall, ltp: callRow?.timeframes["5m"].last ?? pack.atmCall.basePrice }
+    : null;
+  const put = pack.atmPut
+    ? { ...pack.atmPut, ltp: putRow?.timeframes["5m"].last ?? pack.atmPut.basePrice }
+    : null;
+  const sizing = pickAtmLeg(evaluated.snapshot.setup, call, put);
   return {
     generatedAt: now,
     clock: formatIstClock(now),
@@ -60,6 +72,18 @@ export function indexPayload(pack: IndexWindowPack, now: number) {
     pcrBias: pack.pcrBias,
     symbols: pack.symbols,
     rows: pack.rows,
+    quoteKeys: [pack.instrument.instrumentKey, pack.atmCall?.instrumentKey, pack.atmPut?.instrumentKey, "NSE_INDEX|India VIX"].filter(
+      Boolean,
+    ) as string[],
+    vix: pack.vix,
+    atm: { call, put },
+    playbook: {
+      snapshot: evaluated.snapshot,
+      bars: evaluated.bars.slice(-80),
+      vwapSeries: evaluated.vwap.slice(-80),
+      rsiSeries: evaluated.rsi.slice(-80),
+      sizing,
+    },
     tape: {
       last: tf.last,
       changePct: tf.changePct,

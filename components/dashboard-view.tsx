@@ -10,6 +10,7 @@ import { PopOutButton } from "@/components/popout-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { useLiveJson } from "@/lib/use-live-json";
+import { useQuotes } from "@/lib/use-quotes";
 import { cn } from "@/lib/utils";
 
 type Payload = {
@@ -46,7 +47,8 @@ function TfCell({ row, tf }: { row: WatchlistRow; tf: Timeframe }) {
 }
 
 export function DashboardView({ initial = null }: { initial?: Payload | null }) {
-  const { data, error } = useLiveJson<Payload>("/api/dashboard", initial, 20_000);
+  const { data, error } = useLiveJson<Payload>("/api/dashboard", initial, 30_000);
+  const quotes = useQuotes(["NSE_INDEX|Nifty 50", "NSE_INDEX|Nifty Bank"], 3000);
   const [q, setQ] = useState("");
   const [kind, setKind] = useState("all");
 
@@ -82,13 +84,20 @@ export function DashboardView({ initial = null }: { initial?: Payload | null }) 
           </div>
         </div>
       </div>
-      <TapeBar tape={data.tape} clock={data.clock} session={data.session} source={data.source} />
+      <TapeBar
+        tape={data.tape}
+        clock={data.clock}
+        session={data.session}
+        source={data.source}
+        liveNifty={quotes["NSE_INDEX|Nifty 50"]?.last}
+        liveBank={quotes["NSE_INDEX|Nifty Bank"]?.last}
+      />
       {data.sourceNote && <p className="mb-3 text-xs text-zinc-500">{data.sourceNote}</p>}
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold">Multi-timeframe VWAP-RSI</h2>
           <p className="text-sm text-zinc-400">
-            Each cell is VWAP distance then RSI. Green cells sit above VWAP; red sit below. Scan this before an options entry.
+            Each cell is VWAP distance then RSI. Green cells sit above VWAP; red sit below. PCR is shown only on Nifty / Bank Nifty — not on stocks.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -125,7 +134,7 @@ export function DashboardView({ initial = null }: { initial?: Payload | null }) 
                     {tf} · ΔVWAP / RSI
                   </TableHead>
                 ))}
-                <TableHead className="text-zinc-400">PCR</TableHead>
+                <TableHead className="text-zinc-400">Index PCR</TableHead>
                 <TableHead className="text-zinc-400">Bias</TableHead>
               </TableRow>
             </TableHeader>
@@ -143,7 +152,9 @@ export function DashboardView({ initial = null }: { initial?: Payload | null }) 
                       <TfCell row={row} tf={tf} />
                     </TableCell>
                   ))}
-                  <TableCell className="font-mono tabular-nums">{row.pcr.toFixed(2)}</TableCell>
+                  <TableCell className="font-mono tabular-nums">
+                    {row.instrument.kind === "index" && row.pcr != null ? row.pcr.toFixed(2) : "—"}
+                  </TableCell>
                   <TableCell>
                     <Pill
                       tone={

@@ -7,7 +7,8 @@ Research desk for Nifty 50, Bank Nifty, and ATM option strikes. It combines sess
 **Upstox is the live source.** Connect on `/connect` (paste an access token, or OAuth with API key + secret). The desk then pulls:
 
 - 5-minute historical + intraday candles (v3)
-- Weekly Nifty option chain for ATM CE/PE and PCR
+- Weekly option chain for ATM CE/PE and PCR (index windows)
+- LTP quotes every few seconds (indexes, ATM options, India VIX)
 
 If there is no token, or Upstox errors, it **falls back to the IST session simulator** so the UI still works.
 
@@ -25,8 +26,7 @@ Register that redirect URI on the Upstox developer app. Access tokens from the s
 
 | Surface | What it does |
 | --- | --- |
-| **Nifty** | `/nifty` tape plus **Open window** — pops a dedicated Nifty 50 browser window (`/window/nifty`) |
-| **Bank Nifty** | `/banknifty` plus a separate window (`/window/banknifty`) so the two indexes are not mixed |
+| **Nifty / Bank Nifty windows** | Pop-out: live LTP, 15m chart, CE/PE checklist, ATM rupee risk, India VIX, session veto. PCR stays on the index, not stocks. |
 | **Stocks desk** | Combined Nifty 50 stocks MTF watchlist |
 | **Mean reversion** | Names >2% from VWAP with RSI &lt;30 or &gt;70 |
 | **Anchored VWAP** | Session open, weekly open, or largest gap, with RSI slope |

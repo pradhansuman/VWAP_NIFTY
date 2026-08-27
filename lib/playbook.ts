@@ -1,6 +1,7 @@
 import type { BacktestStats, BacktestTrade, Bar } from "@/lib/types";
 import { aggregateBars, aggregateSessionBars, sessionResetVwapSeries, utcDateKey, wilderRsi } from "@/lib/indicators";
-import { istDateKey } from "@/lib/session";
+import { istDateKey, playWindow, sessionVetoReason, type PlayWindow } from "@/lib/session";
+import { vixHardVeto, type VixState } from "@/lib/vix";
 
 export const PLAYBOOK = {
   timeframe: "15m" as const,
@@ -11,6 +12,8 @@ export const PLAYBOOK = {
 
 export type PlaybookOpts = {
   clock?: "ist" | "utc";
+  nowMs?: number;
+  vix?: VixState | null;
 };
 
 function dayKey(clock: PlaybookOpts["clock"]) {
@@ -62,6 +65,10 @@ export type PlaybookSnapshot = {
   rsiGuideLabel: string;
   choppy: boolean;
   avoid: string | null;
+  sessionWindow: PlayWindow | null;
+  sessionVeto: string | null;
+  vix: VixState | null;
+  actionable: boolean;
   long: { steps: ChecklistStep[]; ready: boolean };
   short: { steps: ChecklistStep[]; ready: boolean };
   setup: PlaySetup | null;
@@ -236,6 +243,10 @@ export function evaluatePlaybook(bars5m: Bar[], opts: PlaybookOpts = {}): { bars
     rsiGuideLabel: "Not enough 15m bars",
     choppy: false,
     avoid: "Need more 15-minute history.",
+    sessionWindow: null,
+    sessionVeto: null,
+    vix: opts.vix ?? null,
+    actionable: false,
     long: { steps: [], ready: false },
     short: { steps: [], ready: false },
     setup: null,
@@ -258,6 +269,13 @@ export function evaluatePlaybook(bars5m: Bar[], opts: PlaybookOpts = {}): { bars
     avoid = "Avoid long — price is above VWAP but RSI is below 50 and falling.";
   else if (priceSide === "below" && rsiNow > 50 && rsiRising)
     avoid = "Avoid short — price is below VWAP but RSI is above 50 and rising.";
+
+  const nowMs = opts.nowMs ?? Date.now();
+  const sessionWindow = clock === "ist" ? playWindow(nowMs) : null;
+  const sessionVeto = sessionWindow ? sessionVetoReason(sessionWindow, trend, choppy) : null;
+  const volVeto = vixHardVeto(opts.vix ?? null, choppy);
+  const hardVeto = sessionVeto || volVeto;
+  if (hardVeto) avoid = hardVeto;
 
   const pullL = hadPullbackLong(bars, vwap, i) || (i > 0 && hadPullbackLong(bars, vwap, i - 1));
   const pullS = hadPullbackShort(bars, vwap, i) || (i > 0 && hadPullbackShort(bars, vwap, i - 1));
@@ -324,9 +342,13 @@ export function evaluatePlaybook(bars5m: Bar[], opts: PlaybookOpts = {}): { bars
       rsiGuideLabel: guide.label,
       choppy,
       avoid,
-      long: { steps: longSteps, ready: longSteps.every((s) => s.ok) },
-      short: { steps: shortSteps, ready: shortSteps.every((s) => s.ok) },
-      setup: choppy ? null : setup,
+      sessionWindow,
+      sessionVeto,
+      vix: opts.vix ?? null,
+      actionable: !hardVeto && !choppy,
+      long: { steps: longSteps, ready: !hardVeto && longSteps.every((s) => s.ok) },
+      short: { steps: shortSteps, ready: !hardVeto && shortSteps.every((s) => s.ok) },
+      setup: choppy && !hardVeto ? null : setup,
     },
   };
 }

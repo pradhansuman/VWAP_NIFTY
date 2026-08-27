@@ -67,8 +67,8 @@ export type TimeframeSnapshot = {
 
 export type WatchlistRow = {
   instrument: Instrument;
-  pcr: number;
-  pcrBias: "bullish" | "bearish" | "neutral";
+  pcr: number | null;
+  pcrBias: "bullish" | "bearish" | "neutral" | null;
   timeframes: Record<Timeframe, TimeframeSnapshot>;
   composite: "long" | "short" | "mixed" | "flat";
 };

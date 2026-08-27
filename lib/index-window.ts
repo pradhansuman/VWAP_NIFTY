@@ -1,4 +1,4 @@
-import type { DataSource, Instrument, WatchlistRow } from "@/lib/types";
+import type { Bar, DataSource, Instrument, WatchlistRow } from "@/lib/types";
 import { getInstrument } from "@/lib/universe";
 import { flattenBars, generateHistory, pcrFor } from "@/lib/simulate";
 import { buildRows } from "@/lib/market";
@@ -8,6 +8,7 @@ import { fetchIndexAtm, pcrBias } from "@/lib/upstox/chain";
 import { mapPool } from "@/lib/upstox/client";
 import { rememberInstruments } from "@/lib/desk";
 import { createSWR } from "@/lib/swr";
+import { loadIndiaVix, simulatedVix, type VixState } from "@/lib/vix";
 
 export const INDEX_WINDOWS = {
   NIFTY: {
@@ -40,7 +41,11 @@ export type IndexWindowPack = {
   rows: WatchlistRow[];
   symbols: Instrument[];
   pcr: number;
-  pcrBias: WatchlistRow["pcrBias"];
+  pcrBias: NonNullable<WatchlistRow["pcrBias"]>;
+  indexBars: Bar[];
+  vix: VixState;
+  atmCall: Instrument | null;
+  atmPut: Instrument | null;
 };
 
 const windowCache = createSWR<IndexWindowPack>(8_000, 90_000);
@@ -60,6 +65,10 @@ function simulatedWindow(id: IndexWindowId, nowMs: number, note: string): IndexW
     symbols: [instrument],
     pcr,
     pcrBias: bias,
+    indexBars: bars,
+    vix: simulatedVix(nowMs),
+    atmCall: null,
+    atmPut: null,
   };
 }
 
@@ -72,9 +81,10 @@ export async function loadIndexWindow(id: IndexWindowId, request?: Request, nowM
 
   return windowCache.getOrLoad(`${id}:${accessToken.slice(-8)}`, nowMs, async () => {
     try {
-      const [atm, indexBars] = await Promise.all([
+      const [atm, indexBars, vix] = await Promise.all([
         fetchIndexAtm(accessToken, meta.underlyingKey, meta.prefix, meta.displayName, nowMs).catch(() => null),
         fetchFiveMinuteBars(accessToken, instrument.instrumentKey!, nowMs, 5),
+        loadIndiaVix(accessToken, nowMs).catch(() => simulatedVix(nowMs)),
       ]);
       const optionSeries = atm
         ? await mapPool([atm.call, atm.put], 2, async (item) => {
@@ -100,6 +110,10 @@ export async function loadIndexWindow(id: IndexWindowId, request?: Request, nowM
         symbols: usable.map((s) => s.instrument),
         pcr,
         pcrBias: bias,
+        indexBars,
+        vix,
+        atmCall: atm?.call ?? null,
+        atmPut: atm?.put ?? null,
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : "Index window failed";

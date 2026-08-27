@@ -67,3 +67,47 @@ export function sessionStatus(ms: number) {
   if (mins >= 15 * 60 + 30) return "closed";
   return "live";
 }
+
+export type PlayWindowId = "opening" | "lunch" | "closing" | "active" | "closed";
+
+export type PlayWindow = {
+  id: PlayWindowId;
+  veto: boolean;
+  allowTrend: boolean;
+  label: string;
+};
+
+export function playWindow(ms: number): PlayWindow {
+  const p = toIstParts(ms);
+  if (p.day === 0 || p.day === 6) {
+    return { id: "closed", veto: true, allowTrend: false, label: "Weekend — no cash session" };
+  }
+  const mins = p.hours * 60 + p.minutes;
+  if (mins < 9 * 60 + 15 || mins >= 15 * 60 + 30) {
+    return { id: "closed", veto: true, allowTrend: false, label: "Cash market closed" };
+  }
+  if (mins < 9 * 60 + 30) {
+    return { id: "opening", veto: true, allowTrend: false, label: "Opening 15m — skip auction noise" };
+  }
+  if (mins >= 12 * 60 && mins < 13 * 60 + 15) {
+    return { id: "lunch", veto: true, allowTrend: true, label: "Lunch 12:00–13:15 IST" };
+  }
+  if (mins >= 15 * 60 + 15) {
+    return { id: "closing", veto: true, allowTrend: true, label: "Last 15m of the cash session" };
+  }
+  return { id: "active", veto: false, allowTrend: false, label: "Cash session" };
+}
+
+export function sessionVetoReason(
+  window: PlayWindow,
+  vwapTrend: "rising" | "falling" | "flat",
+  choppy: boolean,
+): string | null {
+  if (!window.veto) return null;
+  const trending = (vwapTrend === "rising" || vwapTrend === "falling") && !choppy;
+  if (window.allowTrend && trending) return null;
+  if (window.allowTrend) {
+    return `${window.label} — skip unless session VWAP is already trending cleanly.`;
+  }
+  return `${window.label}.`;
+}

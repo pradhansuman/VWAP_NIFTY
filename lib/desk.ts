@@ -30,7 +30,7 @@ const deskCache = createSWR<DeskPack>(8_000, 90_000);
 function simulatedDesk(nowMs: number, note: string): DeskPack {
   const rows = UNIVERSE.map((instrument) => {
     const bars = flattenBars(generateHistory(instrument, nowMs));
-    const { pcr, bias } = pcrFor(instrument.symbol, nowMs);
+    const { pcr, bias } = instrument.kind === "index" ? pcrFor(instrument.symbol, nowMs) : { pcr: null, bias: null };
     return buildRows([{ instrument, bars }], pcr, bias)[0];
   });
   return {
@@ -62,7 +62,7 @@ async function liveDesk(token: string, nowMs: number): Promise<DeskPack> {
   }
   const pcr = atm?.pcr ?? 1;
   const bias = pcrBias(pcr);
-  const rows = buildRows(usable, pcr, bias);
+  const rows = buildRows(usable, pcr, bias, (instrument) => instrument.symbol === "NIFTY");
   return {
     source: "upstox",
     sourceNote: atm
