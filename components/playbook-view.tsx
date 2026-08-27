@@ -134,12 +134,14 @@ export function PlaybookView({
   scanEndpoint = "/api/playbook/scan",
   defaultSymbol = "NIFTY",
   venue = "options",
+  symbolList,
   showScan = true,
 }: {
   endpoint?: string;
   scanEndpoint?: string;
   defaultSymbol?: string;
   venue?: "options" | "spot";
+  symbolList?: Instrument[];
   showScan?: boolean;
 }) {
   const [tab, setTab] = useState<"live" | "scan" | "backtest">("live");
@@ -185,7 +187,7 @@ export function PlaybookView({
   }
 
   const snap = live?.snapshot;
-  const symbols = live?.symbols ?? [];
+  const symbols = symbolList?.length ? symbolList : live?.symbols ?? [];
   const longName = venue === "spot" ? "Long BTC" : "Buy CE";
   const shortName = venue === "spot" ? "Short BTC" : "Buy PE";
   const statusCopy = useMemo(() => {
@@ -222,7 +224,7 @@ export function PlaybookView({
               {t === "live" ? "Live setup" : t === "scan" ? "Watchlist scan" : "Backtest 1:2"}
             </Button>
           ))}
-          {venue === "options" && (
+          {(venue === "options" || (symbolList && symbolList.length > 1)) && (
             <select
               value={symbol}
               onChange={(e) => setSymbol(e.target.value)}

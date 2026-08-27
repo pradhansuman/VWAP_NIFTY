@@ -2,42 +2,65 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BookOpen, Coins, Crosshair, Gauge, Plug, Radar, Workflow } from "lucide-react";
+import { Activity, BookOpen, Building2, Coins, Crosshair, Gauge, Landmark, Plug, Radar, Workflow } from "lucide-react";
 import { SourceChip } from "@/components/source-chip";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
-  { href: "/", label: "MTF desk", icon: Gauge },
+  { href: "/nifty", label: "Nifty", icon: Landmark },
+  { href: "/banknifty", label: "Bank Nifty", icon: Building2 },
+  { href: "/bitcoin", label: "Bitcoin", icon: Coins },
+  { href: "/", label: "Stocks desk", icon: Gauge },
   { href: "/scanner", label: "Mean reversion", icon: Radar },
   { href: "/anchor", label: "Anchored VWAP", icon: Crosshair },
   { href: "/confluence", label: "Confluence", icon: Workflow },
   { href: "/playbook", label: "15m playbook", icon: BookOpen },
   { href: "/backtest", label: "Backtest", icon: Activity },
-  { href: "/bitcoin", label: "Bitcoin", icon: Coins },
   { href: "/connect", label: "Upstox", icon: Plug },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const bitcoin = pathname.startsWith("/bitcoin");
+  const niftyWin = pathname.startsWith("/nifty");
+  const bankWin = pathname.startsWith("/banknifty");
+  const deskLabel = niftyWin
+    ? "Nifty 50 window"
+    : bankWin
+      ? "Bank Nifty window"
+      : bitcoin
+        ? "Bitcoin desk"
+        : "Nifty options desk";
+  const deskTitle = niftyWin
+    ? "Nifty 50 VWAP + RSI"
+    : bankWin
+      ? "Bank Nifty VWAP + RSI"
+      : bitcoin
+        ? "BTCUSDT VWAP + RSI"
+        : "VWAP + RSI applications";
+  const deskHint = niftyWin
+    ? "Standalone Nifty 50 tape, PCR, ATM options, and 15m CE/PE playbook."
+    : bankWin
+      ? "Standalone Bank Nifty tape, PCR, ATM options, and 15m CE/PE playbook."
+      : bitcoin
+        ? "UTC-day VWAP and RSI on live BTCUSDT. Isolated from the Nifty tape."
+        : "Session VWAP bands, RSI slope, and PCR bias on a Nifty 50 / options watchlist.";
   return (
     <div className="flex min-h-full flex-col bg-[#071018] text-zinc-100">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#071018]/90 backdrop-blur">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-3">
           <div className="min-w-0">
             <p className="font-mono text-[11px] tracking-[0.18em] text-teal-300/80 uppercase">
-              {bitcoin ? "Bitcoin desk" : "Nifty options desk"}
+              {deskLabel}
             </p>
             <h1 className="truncate text-base font-semibold tracking-tight sm:text-lg">
-              {bitcoin ? "BTCUSDT VWAP + RSI" : "VWAP + RSI applications"}
+              {deskTitle}
             </h1>
           </div>
           <div className="flex min-w-0 flex-col items-end gap-2 sm:max-w-md">
             {!bitcoin && <SourceChip />}
             <p className="hidden text-right text-xs text-zinc-400 sm:block">
-              {bitcoin
-                ? "UTC-day VWAP and RSI on live BTCUSDT. Isolated from the Nifty tape."
-                : "Session VWAP bands, RSI slope, and PCR bias on a Nifty 50 / options watchlist."}
+              {deskHint}
             </p>
           </div>
         </div>
@@ -51,7 +74,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 href={link.href}
                 className={cn(
                   "inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors",
-                  active || (link.href === "/bitcoin" && bitcoin)
+                  active ||
+                    (link.href === "/bitcoin" && bitcoin) ||
+                    (link.href === "/nifty" && niftyWin) ||
+                    (link.href === "/banknifty" && bankWin)
                     ? "bg-teal-400/15 text-teal-200"
                     : "text-zinc-400 hover:bg-white/5 hover:text-zinc-100",
                 )}

@@ -49,16 +49,21 @@ function nearestExpiry(contracts: Contract[], nowMs = Date.now()) {
   return expiries.find((d) => d >= today) ?? expiries.at(-1) ?? null;
 }
 
-export async function fetchNiftyAtm(token: string): Promise<ChainSummary | null> {
+export async function fetchIndexAtm(
+  token: string,
+  underlyingKey: string,
+  prefix: string,
+  displayName: string,
+): Promise<ChainSummary | null> {
   const contracts = await upstoxGet<Contract[]>(
-    `/v2/option/contract?instrument_key=${encodeURIComponent("NSE_INDEX|Nifty 50")}`,
+    `/v2/option/contract?instrument_key=${encodeURIComponent(underlyingKey)}`,
     token,
   );
   if (!Array.isArray(contracts) || contracts.length === 0) return null;
   const expiry = nearestExpiry(contracts);
   if (!expiry) return null;
   const data = await upstoxGet<ChainRow[]>(
-    `/v2/option/chain?instrument_key=${encodeURIComponent("NSE_INDEX|Nifty 50")}&expiry_date=${expiry}`,
+    `/v2/option/chain?instrument_key=${encodeURIComponent(underlyingKey)}&expiry_date=${expiry}`,
     token,
   );
   if (!Array.isArray(data) || data.length === 0) return null;
@@ -86,22 +91,30 @@ export async function fetchNiftyAtm(token: string): Promise<ChainSummary | null>
     pcr,
     expiry,
     call: {
-      symbol: `NIFTY${strike}CE`,
-      name: `Nifty ${strike} CE · ${expiry}`,
+      symbol: `${prefix}${strike}CE`,
+      name: `${displayName} ${strike} CE · ${expiry}`,
       kind: "option",
       lotSize: lot,
       basePrice: num(atm.call_options?.market_data?.ltp) || 1,
       instrumentKey: callKey,
     },
     put: {
-      symbol: `NIFTY${strike}PE`,
-      name: `Nifty ${strike} PE · ${expiry}`,
+      symbol: `${prefix}${strike}PE`,
+      name: `${displayName} ${strike} PE · ${expiry}`,
       kind: "option",
       lotSize: lot,
       basePrice: num(atm.put_options?.market_data?.ltp) || 1,
       instrumentKey: putKey,
     },
   };
+}
+
+export function fetchNiftyAtm(token: string) {
+  return fetchIndexAtm(token, "NSE_INDEX|Nifty 50", "NIFTY", "Nifty");
+}
+
+export function fetchBankNiftyAtm(token: string) {
+  return fetchIndexAtm(token, "NSE_INDEX|Nifty Bank", "BANKNIFTY", "Bank Nifty");
 }
 
 export function pcrBias(pcr: number) {

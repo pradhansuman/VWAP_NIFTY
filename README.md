@@ -25,7 +25,9 @@ Register that redirect URI on the Upstox developer app. Access tokens from the s
 
 | Surface | What it does |
 | --- | --- |
-| **MTF desk** | VWAP distance + RSI across 5m / 15m / 1h / daily, color-coded, plus PCR bias |
+| **Nifty** | Standalone Nifty 50 window: VWAP, RSI, PCR, ATM CE/PE, 15m playbook |
+| **Bank Nifty** | Standalone Bank Nifty window, isolated from Nifty 50 |
+| **Stocks desk** | Combined Nifty 50 stocks MTF watchlist |
 | **Mean reversion** | Names >2% from VWAP with RSI &lt;30 or &gt;70 |
 | **Anchored VWAP** | Session open, weekly open, or largest gap, with RSI slope |
 | **Confluence** | VWAP reclaim/reject aligned with RSI divergence or slope |

@@ -14,6 +14,16 @@ export type DeskPack = {
   symbols: Instrument[];
 };
 
+const extraInstruments = new Map<string, Instrument>();
+
+export function rememberInstruments(list: Instrument[]) {
+  for (const item of list) extraInstruments.set(item.symbol, item);
+}
+
+export function resolveInstrument(symbol: string) {
+  return extraInstruments.get(symbol) ?? getInstrument(symbol);
+}
+
 const deskCache = new Map<string, { at: number; pack: DeskPack }>();
 
 function simulatedDesk(nowMs: number, note: string): DeskPack {
@@ -70,6 +80,7 @@ export async function loadDesk(request?: Request, nowMs = Date.now()): Promise<D
   }
   try {
     const pack = await liveDesk(accessToken, nowMs);
+    rememberInstruments(pack.symbols);
     deskCache.set(cacheKey, { at: nowMs, pack });
     return pack;
   } catch (err) {
@@ -84,7 +95,7 @@ export async function loadHistory(symbol: string, request?: Request, nowMs = Dat
   const { accessToken } = getCreds(request);
   if (accessToken) {
     const desk = await loadDesk(request, nowMs);
-    const instrument = desk.symbols.find((s) => s.symbol === symbol) ?? getInstrument(symbol);
+    const instrument = desk.symbols.find((s) => s.symbol === symbol) ?? resolveInstrument(symbol);
     const key = instrument?.instrumentKey;
     if (instrument && key) {
       const bars = await fetchFiveMinuteBars(accessToken, key, nowMs);
