@@ -1,4 +1,5 @@
 import type { Bar, Divergence, RsiState, VwapState } from "@/lib/types";
+import { istDateKey, sessionOpenUtc } from "@/lib/session";
 
 export function typicalPrice(bar: Bar) {
   return (bar.high + bar.low + bar.close) / 3;
@@ -208,6 +209,51 @@ export function aggregateBars(bars: Bar[], sizeMs: number): Bar[] {
     }
   }
   if (bucket) out.push(bucket);
+  return out;
+}
+
+/** 15-minute (or other) buckets aligned to the 09:15 IST session open. */
+export function aggregateSessionBars(bars: Bar[], sizeMs: number): Bar[] {
+  const out: Bar[] = [];
+  let bucket: Bar | null = null;
+  let bucketStart = 0;
+  for (const bar of bars) {
+    const open = sessionOpenUtc(bar.time);
+    const offset = Math.max(0, bar.time - open);
+    const start = open + Math.floor(offset / sizeMs) * sizeMs;
+    if (!bucket || start !== bucketStart) {
+      if (bucket) out.push(bucket);
+      bucketStart = start;
+      bucket = { ...bar, time: start };
+    } else {
+      bucket.high = Math.max(bucket.high, bar.high);
+      bucket.low = Math.min(bucket.low, bar.low);
+      bucket.close = bar.close;
+      bucket.volume += bar.volume;
+    }
+  }
+  if (bucket) out.push(bucket);
+  return out;
+}
+
+export function sessionResetVwapSeries(bars: Bar[]): number[] {
+  const out: number[] = [];
+  let pv = 0;
+  let vol = 0;
+  let day = "";
+  for (const bar of bars) {
+    const key = istDateKey(bar.time);
+    if (key !== day) {
+      day = key;
+      pv = 0;
+      vol = 0;
+    }
+    const tp = typicalPrice(bar);
+    const v = Math.max(1, bar.volume);
+    pv += tp * v;
+    vol += v;
+    out.push(pv / vol);
+  }
   return out;
 }
 

@@ -1,0 +1,31 @@
+//@version=5
+indicator("VWAP RSI 15m Rejection Breakout", overlay=true, max_labels_count=50)
+
+rsiLen = input.int(14, "RSI length")
+rr = input.float(2.0, "Risk:reward")
+touchPct = input.float(0.15, "VWAP touch %")
+
+vwapV = ta.vwap(hlc3)
+vwapRising = vwapV > vwapV[3]
+vwapFalling = vwapV < vwapV[3]
+rsi = ta.rsi(close, rsiLen)
+rsiUp = rsi > rsi[1]
+rsiDn = rsi < rsi[1]
+pad = vwapV * touchPct / 100
+
+bullRej = low <= vwapV + pad and close > vwapV and (close >= open or close - low > 0.5 * (high - low))
+bearRej = high >= vwapV - pad and close < vwapV and (close <= open or high - close > 0.5 * (high - low))
+
+longCore = vwapRising and close > vwapV and bullRej and rsi > 50 and rsiUp
+shortCore = vwapFalling and close < vwapV and bearRej and rsi < 50 and rsiDn
+longEntry = longCore[1] and high > high[1]
+shortEntry = shortCore[1] and low < low[1]
+
+plot(vwapV, "Session VWAP", color=vwapRising ? color.new(color.teal, 0) : vwapFalling ? color.new(color.red, 0) : color.new(color.gray, 20), linewidth=2)
+plotshape(longCore, title="CE rejection", style=shape.diamond, location=location.belowbar, color=color.new(color.teal, 0), size=size.tiny)
+plotshape(shortCore, title="PE rejection", style=shape.diamond, location=location.abovebar, color=color.new(color.red, 0), size=size.tiny)
+plotshape(longEntry, title="Buy CE", style=shape.labelup, location=location.belowbar, color=color.new(color.teal, 0), text="CE 1:2", textcolor=color.white, size=size.tiny)
+plotshape(shortEntry, title="Buy PE", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 0), text="PE 1:2", textcolor=color.white, size=size.tiny)
+
+alertcondition(longEntry, "Buy CE breakout", "15m VWAP rejection high broken with RSI > 50")
+alertcondition(shortEntry, "Buy PE breakout", "15m VWAP rejection low broken with RSI < 50")

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Crosshair, Gauge, Plug, Radar, Workflow } from "lucide-react";
+import { Activity, BookOpen, Crosshair, Gauge, Plug, Radar, Workflow } from "lucide-react";
 import { SourceChip } from "@/components/source-chip";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/scanner", label: "Mean reversion", icon: Radar },
   { href: "/anchor", label: "Anchored VWAP", icon: Crosshair },
   { href: "/confluence", label: "Confluence", icon: Workflow },
+  { href: "/playbook", label: "15m playbook", icon: BookOpen },
   { href: "/backtest", label: "Backtest", icon: Activity },
   { href: "/connect", label: "Upstox", icon: Plug },
 ];
