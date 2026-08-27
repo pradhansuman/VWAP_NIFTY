@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Crosshair, Gauge, Radar, Workflow } from "lucide-react";
+import { Activity, Crosshair, Gauge, Plug, Radar, Workflow } from "lucide-react";
+import { SourceChip } from "@/components/source-chip";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
@@ -11,6 +12,7 @@ const LINKS = [
   { href: "/anchor", label: "Anchored VWAP", icon: Crosshair },
   { href: "/confluence", label: "Confluence", icon: Workflow },
   { href: "/backtest", label: "Backtest", icon: Activity },
+  { href: "/connect", label: "Upstox", icon: Plug },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -27,9 +29,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
               VWAP + RSI applications
             </h1>
           </div>
-          <p className="hidden max-w-sm text-right text-xs text-zinc-400 sm:block">
-            Session VWAP bands, RSI slope, and PCR bias on a Nifty 50 / options watchlist.
-          </p>
+          <div className="flex min-w-0 flex-col items-end gap-2 sm:max-w-md">
+            <SourceChip />
+            <p className="hidden text-right text-xs text-zinc-400 sm:block">
+              Session VWAP bands, RSI slope, and PCR bias on a Nifty 50 / options watchlist.
+            </p>
+          </div>
         </div>
         <nav className="mx-auto flex max-w-[1400px] gap-1 overflow-x-auto px-3 pb-2">
           {LINKS.map((link) => {
@@ -55,7 +60,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </header>
       <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-4">{children}</main>
       <footer className="border-t border-white/10 px-4 py-3 text-center text-[11px] text-zinc-500">
-        Simulated NSE session replay for research — not live HDFC/broker quotes and not investment advice.
+        Simulated fallback when Upstox is disconnected. Live candles are research-only — not investment advice.
       </footer>
     </div>
   );

@@ -1,4 +1,4 @@
-import type { Bar, Timeframe, TimeframeSnapshot, WatchlistRow } from "@/lib/types";
+import type { Bar, Instrument, Timeframe, TimeframeSnapshot, WatchlistRow } from "@/lib/types";
 import { TIMEFRAMES, UNIVERSE, getInstrument } from "@/lib/universe";
 import { aggregateBars } from "@/lib/indicators";
 import { flattenBars, generateHistory, pcrFor, scenarioFor } from "@/lib/simulate";
@@ -43,6 +43,22 @@ function snapshot(all: Bar[], tf: Timeframe): TimeframeSnapshot {
   return { timeframe: tf, ...snap };
 }
 
+export function buildRows(
+  series: { instrument: Instrument; bars: Bar[] }[],
+  pcr: number,
+  pcrBias: WatchlistRow["pcrBias"],
+): WatchlistRow[] {
+  return series.map(({ instrument, bars }) => {
+    const timeframes = Object.fromEntries(TIMEFRAMES.map((tf) => [tf, snapshot(bars, tf)])) as WatchlistRow["timeframes"];
+    const sides = TIMEFRAMES.map((tf) => timeframes[tf].confluence.side);
+    const longs = sides.filter((s) => s === "long").length;
+    const shorts = sides.filter((s) => s === "short").length;
+    const composite =
+      longs >= 3 && shorts === 0 ? "long" : shorts >= 3 && longs === 0 ? "short" : longs && shorts ? "mixed" : "flat";
+    return { instrument, pcr, pcrBias, timeframes, composite };
+  });
+}
+
 export function getHistory(symbol: string, nowMs = Date.now()) {
   const instrument = getInstrument(symbol);
   if (!instrument) return null;
@@ -52,16 +68,9 @@ export function getHistory(symbol: string, nowMs = Date.now()) {
 
 export function getWatchlist(nowMs = Date.now()): WatchlistRow[] {
   return UNIVERSE.map((instrument) => {
-    const history = generateHistory(instrument, nowMs);
-    const bars = flattenBars(history);
-    const timeframes = Object.fromEntries(TIMEFRAMES.map((tf) => [tf, snapshot(bars, tf)])) as WatchlistRow["timeframes"];
-    const sides = TIMEFRAMES.map((tf) => timeframes[tf].confluence.side);
-    const longs = sides.filter((s) => s === "long").length;
-    const shorts = sides.filter((s) => s === "short").length;
-    const composite =
-      longs >= 3 && shorts === 0 ? "long" : shorts >= 3 && longs === 0 ? "short" : longs && shorts ? "mixed" : "flat";
+    const bars = flattenBars(generateHistory(instrument, nowMs));
     const { pcr, bias } = pcrFor(instrument.symbol, nowMs);
-    return { instrument, pcr, pcrBias: bias, timeframes, composite };
+    return buildRows([{ instrument, bars }], pcr, bias)[0];
   });
 }
 
@@ -91,9 +100,11 @@ export function getScanner(rows?: WatchlistRow[], nowMs = Date.now()) {
     .sort((a, b) => Math.abs(b.deviationPct) - Math.abs(a.deviationPct));
 }
 
-export function getChart(symbol: string, nowMs = Date.now(), anchor: "session" | "week" | "gap" = "session") {
-  const pack = getHistory(symbol, nowMs);
-  if (!pack) return null;
+export function chartFromBars(
+  pack: { instrument: Instrument; bars: Bar[] },
+  anchor: "session" | "week" | "gap" = "session",
+  nowMs = Date.now(),
+) {
   const bars = pack.bars.slice(-400);
   const lastTime = bars.at(-1)?.time ?? nowMs;
   let fromIndex = 0;
@@ -119,13 +130,22 @@ export function getChart(symbol: string, nowMs = Date.now(), anchor: "session" |
     instrument: pack.instrument,
     bars,
     fromIndex,
-    scenario: scenarioFor(pack.instrument.symbol, String(pack.history.at(-1)?.dateMs)),
+    scenario: scenarioFor(pack.instrument.symbol, String(lastTime)),
   };
 }
 
+export function getChart(symbol: string, nowMs = Date.now(), anchor: "session" | "week" | "gap" = "session") {
+  const pack = getHistory(symbol, nowMs);
+  if (!pack) return null;
+  return chartFromBars(pack, anchor, nowMs);
+}
+
 export function niftyTape(rows: WatchlistRow[], nowMs = Date.now()) {
-  const nifty = rows.find((r) => r.instrument.symbol === "NIFTY")!;
-  const bank = rows.find((r) => r.instrument.symbol === "BANKNIFTY")!;
+  const nifty = rows.find((r) => r.instrument.symbol === "NIFTY") ?? rows[0];
+  const bank = rows.find((r) => r.instrument.symbol === "BANKNIFTY") ?? nifty;
+  if (!nifty) {
+    throw new Error("Watchlist is empty");
+  }
   return {
     nifty: nifty.timeframes["5m"],
     bank: bank.timeframes["5m"],

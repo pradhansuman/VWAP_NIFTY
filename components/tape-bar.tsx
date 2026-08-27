@@ -16,10 +16,12 @@ export function TapeBar({
   tape,
   clock,
   session,
+  source,
 }: {
   tape: Tape;
   clock: string;
   session: string;
+  source?: "upstox" | "simulated";
 }) {
   const [liveClock, setLiveClock] = useState(clock);
   useEffect(() => {
@@ -61,7 +63,7 @@ export function TapeBar({
         </div>
       </div>
       <div className="rounded-xl border border-white/10 bg-white/4 px-3 py-2">
-        <p className="text-[11px] text-zinc-400">Index PCR (sim)</p>
+        <p className="text-[11px] text-zinc-400">{source === "upstox" ? "Index PCR (Upstox chain)" : "Index PCR (sim)"}</p>
         <p className="font-mono text-lg tabular-nums">{tape.pcr.toFixed(2)}</p>
         <div className="mt-1">
           <Pill tone={tape.pcrBias === "bullish" ? "long" : tape.pcrBias === "bearish" ? "short" : "neutral"}>

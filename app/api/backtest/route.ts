@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { DEFAULT_BACKTEST, runBacktest, type BacktestParams } from "@/lib/backtest";
-import { getHistory } from "@/lib/market";
-import { UNIVERSE } from "@/lib/universe";
+import { loadDesk, loadHistory } from "@/lib/desk";
 
 export const dynamic = "force-dynamic";
 
@@ -16,12 +15,14 @@ export async function GET(request: Request) {
     targetR: Number(searchParams.get("targetR") ?? DEFAULT_BACKTEST.targetR),
     maxHoldBars: Number(searchParams.get("maxHoldBars") ?? DEFAULT_BACKTEST.maxHoldBars),
   };
-  const pack = getHistory(symbol);
+  const pack = await loadHistory(symbol, request);
   if (!pack) return NextResponse.json({ error: "Unknown symbol" }, { status: 404 });
+  const desk = await loadDesk(request);
   const stats = runBacktest(pack.bars, params);
   return NextResponse.json({
     symbol,
-    universe: UNIVERSE.map((u) => u.symbol),
+    source: pack.source,
+    universe: desk.symbols.map((u) => u.symbol),
     params,
     stats: {
       ...stats,

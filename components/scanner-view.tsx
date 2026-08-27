@@ -10,6 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 type Payload = {
   clock: string;
   session: string;
+  source?: "upstox" | "simulated";
+  sourceNote?: string;
   tape: { nifty: TimeframeSnapshot; bank: TimeframeSnapshot; pcr: number; pcrBias: "bullish" | "bearish" | "neutral" };
   hits: ScannerHit[];
 };
@@ -34,7 +36,8 @@ export function ScannerView() {
 
   return (
     <div>
-      <TapeBar tape={data.tape} clock={data.clock} session={data.session} />
+      <TapeBar tape={data.tape} clock={data.clock} session={data.session} source={data.source} />
+      {data.sourceNote && <p className="mb-3 text-xs text-zinc-500">{data.sourceNote}</p>}
       <div className="mb-4">
         <h2 className="text-lg font-semibold">Intraday mean-reversion scanner</h2>
         <p className="text-sm text-zinc-400">

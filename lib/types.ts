@@ -8,7 +8,10 @@ export type Instrument = {
   kind: InstrumentKind;
   lotSize: number;
   basePrice: number;
+  instrumentKey?: string;
 };
+
+export type DataSource = "upstox" | "simulated";
 
 export type Bar = {
   time: number;

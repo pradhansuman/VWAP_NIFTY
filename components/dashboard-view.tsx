@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils";
 type Payload = {
   clock: string;
   session: string;
+  source?: "upstox" | "simulated";
+  sourceNote?: string;
   tape: Parameters<typeof TapeBar>[0]["tape"];
   rows: WatchlistRow[];
 };
@@ -78,7 +80,8 @@ export function DashboardView() {
 
   return (
     <div>
-      <TapeBar tape={data.tape} clock={data.clock} session={data.session} />
+      <TapeBar tape={data.tape} clock={data.clock} session={data.session} source={data.source} />
+      {data.sourceNote && <p className="mb-3 text-xs text-zinc-500">{data.sourceNote}</p>}
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold">Multi-timeframe VWAP-RSI</h2>

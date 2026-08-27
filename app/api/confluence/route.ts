@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { getWatchlist } from "@/lib/market";
+import { loadDesk } from "@/lib/desk";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const rows = getWatchlist();
-  const signals = rows
+export async function GET(request: Request) {
+  const desk = await loadDesk(request);
+  const signals = desk.rows
     .map((row) => ({
       instrument: row.instrument,
       pcr: row.pcr,
@@ -17,5 +17,5 @@ export async function GET() {
       const rank = (s: string) => (s === "long" || s === "short" ? 0 : 1);
       return rank(a.tf.confluence.side) - rank(b.tf.confluence.side);
     });
-  return NextResponse.json({ signals });
+  return NextResponse.json({ source: desk.source, sourceNote: desk.sourceNote, signals });
 }

@@ -1,17 +1,21 @@
 import { NextResponse } from "next/server";
-import { getWatchlist, niftyTape } from "@/lib/market";
+import { loadDesk } from "@/lib/desk";
+import { niftyTape } from "@/lib/market";
 import { formatIstClock, sessionStatus } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   const now = Date.now();
-  const rows = getWatchlist(now);
+  const desk = await loadDesk(request, now);
   return NextResponse.json({
     generatedAt: now,
     clock: formatIstClock(now),
     session: sessionStatus(now),
-    tape: niftyTape(rows, now),
-    rows,
+    source: desk.source,
+    sourceNote: desk.sourceNote,
+    tape: niftyTape(desk.rows, now),
+    rows: desk.rows,
+    symbols: desk.symbols,
   });
 }

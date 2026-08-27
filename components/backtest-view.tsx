@@ -13,6 +13,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 type Payload = {
   symbol: string;
+  source?: string;
+  universe?: string[];
   params: typeof DEFAULT_BACKTEST;
   stats: BacktestStats & { tradeCount: number };
 };
@@ -88,9 +90,9 @@ export function BacktestView() {
             onChange={(e) => setSymbol(e.target.value)}
             className="mt-1 h-8 w-full rounded-lg border border-white/10 bg-[#0c1a22] px-2 text-sm text-zinc-100"
           >
-            {UNIVERSE.map((u) => (
-              <option key={u.symbol} value={u.symbol}>
-                {u.symbol}
+            {(data?.universe?.length ? data.universe : UNIVERSE.map((u) => u.symbol)).map((sym) => (
+              <option key={sym} value={sym}>
+                {sym}
               </option>
             ))}
           </select>

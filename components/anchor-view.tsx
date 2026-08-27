@@ -17,7 +17,9 @@ type Payload = {
   divergence: Divergence;
   vwapSeries: number[];
   rsiSeries: number[];
-  stance: string;
+  stance?: string;
+  source?: string;
+  symbols?: { symbol: string; name: string }[];
 };
 
 function Chart({ bars, vwapSeries, rsiSeries }: { bars: Bar[]; vwapSeries: number[]; rsiSeries: number[] }) {
@@ -124,7 +126,7 @@ export function AnchorView() {
             onChange={(e) => setSymbol(e.target.value)}
             className="h-8 rounded-lg border border-white/10 bg-[#0c1a22] px-2 text-sm"
           >
-            {UNIVERSE.map((u) => (
+            {(data?.symbols?.length ? data.symbols : UNIVERSE).map((u) => (
               <option key={u.symbol} value={u.symbol}>
                 {u.symbol}
               </option>
